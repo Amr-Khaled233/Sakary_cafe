@@ -75,6 +75,24 @@
   <!-- ============================ MAIN ============================ -->
   <main class="max-w-2xl mx-auto px-3 sm:px-4 pt-4">
 
+    <!-- Toolbar: archive (saved log) + backup file + autosave indicator -->
+    <div class="flex items-center gap-2 mb-3 text-xs">
+      <button onclick="openArchive()"
+              class="no-select bg-coffee-card border border-coffee-line rounded-lg px-3 py-2 font-bold
+                     active:scale-95 transition">
+        📋 السجل <span id="archCount" class="text-coffee-gold"></span>
+      </button>
+      <button onclick="exportBackup()"
+              class="no-select bg-coffee-card border border-coffee-line rounded-lg px-3 py-2 font-bold
+                     active:scale-95 transition">⬇️ نسخة</button>
+      <button onclick="document.getElementById('importFile').click()"
+              class="no-select bg-coffee-card border border-coffee-line rounded-lg px-3 py-2 font-bold
+                     active:scale-95 transition">⬆️ استعادة</button>
+      <input id="importFile" type="file" accept="application/json,.json" class="hidden"
+             onchange="importBackup(event)" />
+      <span id="savedFlag" class="mr-auto text-coffee-muted opacity-0 transition-opacity duration-300">✓ محفوظ</span>
+    </div>
+
     <!-- Add table row -->
     <div class="flex gap-2 mb-4">
       <input id="newTableName" type="text" inputmode="text"
@@ -141,6 +159,32 @@
     </div>
   </div>
 
+  <!-- ============================ ARCHIVE / HISTORY MODAL ============================ -->
+  <div id="archiveModal" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-black/60" onclick="closeArchive()"></div>
+    <div class="absolute inset-x-0 bottom-0 max-w-2xl mx-auto bg-coffee-card border-t border-coffee-line
+                rounded-t-3xl p-4 pb-6 max-h-[88vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-extrabold text-lg">📋 السجل المحفوظ</h3>
+        <button onclick="closeArchive()" class="text-coffee-muted text-2xl leading-none px-2">✕</button>
+      </div>
+      <p class="text-xs text-coffee-muted mb-3">
+        الطاولات اللي خلّصتها أو فرّغتها بتتحفظ هنا تلقائياً — تقدر ترجّعها أو تمسحها نهائي براحتك.
+      </p>
+      <div id="archiveList" class="space-y-3"></div>
+      <button onclick="clearArchive()"
+              class="no-select w-full mt-4 text-xs text-coffee-muted hover:text-red-300 underline underline-offset-4">
+        مسح السجل كله
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast (brief confirmation messages) -->
+  <div id="toast"
+       class="opacity-0 translate-y-2 transition-all duration-300 fixed bottom-6 left-1/2 -translate-x-1/2 z-[60]
+              bg-coffee-card2 border border-coffee-gold/40 text-coffee-cream text-sm font-bold
+              px-4 py-2 rounded-full shadow-lg shadow-black/40 pointer-events-none"></div>
+
   <script>
   /* =====================================================================================
      STATE MANAGEMENT
@@ -194,13 +238,20 @@
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (!Array.isArray(data.tables)) data.tables = [];
+        if (!Array.isArray(data.archive)) data.archive = []; // migrate older saves
+        return data;
+      }
     } catch (e) { console.warn('Could not load saved data', e); }
-    return { tables: [] };
+    return { tables: [], archive: [] };
   }
 
+  // Persist to localStorage on every change. This is what makes the data survive
+  // refreshes AND fully closing/reopening the browser on the same device.
   function save() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); flashSaved(); }
     catch (e) { console.warn('Could not save data', e); }
   }
 
@@ -242,20 +293,39 @@
     save(); render();
   }
 
+  // Store a deep snapshot of a table in the archive (history) with a timestamp.
+  // No table is ever destroyed before a copy lands here, so "who drank what" is kept.
+  // The archive is the ONLY place data is permanently deleted — on purpose, by the user.
+  function archiveTable(table) {
+    const snap = JSON.parse(JSON.stringify(table));
+    snap.archId = uid();
+    snap.archivedAt = Date.now();
+    state.archive.unshift(snap); // newest first
+  }
+
+  // Remove a table from the active screen. If it has orders, archive a copy first.
   function deleteTable(tableId) {
     const t = state.tables.find(t => t.id === tableId);
-    if (!confirm(`حذف "${t.name}" بكل بياناتها؟`)) return;
+    const hasData = t.customers.length > 0;
+    const msg = hasData
+      ? `"${t.name}" هتتحفظ في السجل وتتشال من الشاشة. تمام؟`
+      : `حذف "${t.name}"؟`;
+    if (!confirm(msg)) return;
+    if (hasData) { archiveTable(t); toast('📋 اتحفظت في السجل'); }
     state.tables = state.tables.filter(t => t.id !== tableId);
     save(); render();
   }
 
-  // "Clear" empties a table's customers but keeps the table itself.
+  // "Clear" keeps the table but empties its customers (to reuse the same table).
+  // A snapshot is archived first so the previous round isn't lost.
   function clearTable(tableId) {
     const t = state.tables.find(t => t.id === tableId);
     if (!t.customers.length) return;
-    if (!confirm(`تفريغ طلبات "${t.name}"؟`)) return;
+    if (!confirm(`تفريغ طلبات "${t.name}"؟ (هتتحفظ نسخة في السجل)`)) return;
+    archiveTable(t);
     t.customers = [];
     save(); render();
+    toast('📋 اتحفظت في السجل واتفرّغت');
   }
 
   function toggleTable(tableId) {
@@ -394,9 +464,148 @@
      RESET
      ===================================================================================== */
   function resetAll() {
-    if (!confirm('سيتم مسح كل الطاولات والطلبات نهائياً. متأكد؟')) return;
-    state = { tables: [] };
+    if (!confirm('هيتم مسح كل الطاولات الحالية. (السجل المحفوظ مش هيتأثر) متأكد؟')) return;
+    state.tables = [];
     save(); render();
+  }
+
+  /* =====================================================================================
+     ARCHIVE / HISTORY VIEW
+     ===================================================================================== */
+
+  function openArchive() {
+    renderArchive();
+    document.getElementById('archiveModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeArchive() {
+    document.getElementById('archiveModal').classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  // Bring an archived table back onto the active screen (removes it from the archive).
+  function restoreArchived(archId) {
+    const idx = state.archive.findIndex(a => a.archId === archId);
+    if (idx === -1) return;
+    const snap = state.archive[idx];
+    state.archive.splice(idx, 1);
+    state.tables.push({ id: uid(), name: snap.name, open: true, customers: snap.customers });
+    save(); render(); renderArchive();
+    toast('↩️ رجعت للشاشة');
+  }
+
+  // Permanently delete one archived entry — the only place data is truly lost.
+  function deleteArchived(archId) {
+    if (!confirm('حذف نهائي من السجل؟ مش هينفع يترجع.')) return;
+    state.archive = state.archive.filter(a => a.archId !== archId);
+    save(); render(); renderArchive();
+  }
+  function clearArchive() {
+    if (!state.archive.length) return;
+    if (!confirm('مسح السجل كله نهائياً؟')) return;
+    state.archive = [];
+    save(); render(); renderArchive();
+  }
+
+  function fmtDate(ts) {
+    try { return new Date(ts).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }); }
+    catch { return new Date(ts).toLocaleString(); }
+  }
+
+  function renderArchive() {
+    const list = document.getElementById('archiveList');
+    if (!state.archive.length) {
+      list.innerHTML = `<p class="text-center text-coffee-muted py-10 text-sm">
+        السجل فاضي. لما تخلّص أو تشيل طاولة فيها طلبات، نسخة منها هتتحفظ هنا.</p>`;
+      return;
+    }
+    list.innerHTML = state.archive.map(a => {
+      const total = a.customers.reduce((s, c) =>
+        s + (c.override != null ? c.override : c.items.reduce((x, it) => x + it.price * it.qty, 0)), 0);
+      const people = a.customers.map(c => {
+        const sub = c.override != null ? c.override : c.items.reduce((x, it) => x + it.price * it.qty, 0);
+        const drinks = c.items.map(it => `${escHtml(it.name)}×${it.qty}`).join('، ') || 'بدون طلبات';
+        return `<div class="text-[12px] flex justify-between gap-2 py-0.5">
+                  <span class="min-w-0"><b>${escHtml(c.name)}</b><span class="text-coffee-muted"> — ${drinks}</span></span>
+                  <span class="text-coffee-gold font-bold shrink-0">${fmt(sub)}</span>
+                </div>`;
+      }).join('');
+      return `
+      <div class="bg-coffee-card2 border border-coffee-line rounded-xl p-3">
+        <div class="flex items-center justify-between gap-2 mb-1">
+          <div class="min-w-0">
+            <p class="font-extrabold truncate">${escHtml(a.name)}</p>
+            <p class="text-[10px] text-coffee-muted">${fmtDate(a.archivedAt)}</p>
+          </div>
+          <p class="font-extrabold text-coffee-gold shrink-0">${fmt(total)}</p>
+        </div>
+        <div class="border-t border-coffee-line/60 pt-1 mt-1">${people}</div>
+        <div class="flex gap-2 mt-2">
+          <button onclick="restoreArchived('${a.archId}')"
+                  class="no-select flex-1 bg-coffee-gold/15 border border-coffee-gold/40 text-coffee-gold
+                         text-sm font-bold rounded-lg py-2 active:scale-95 transition">↩️ استرجاع</button>
+          <button onclick="deleteArchived('${a.archId}')"
+                  class="no-select px-4 bg-red-500/15 border border-red-500/40 text-red-300
+                         text-sm rounded-lg py-2 active:scale-95 transition">🗑 حذف نهائي</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  /* =====================================================================================
+     BACKUP — export all data to a JSON file / import it back (move between devices,
+     or keep an off-device copy so nothing can ever be lost).
+     ===================================================================================== */
+
+  function exportBackup() {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const d = new Date();
+    a.href = url;
+    a.download = `cafe-backup-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('⬇️ اتنزّلت النسخة');
+  }
+
+  function importBackup(ev) {
+    const file = ev.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!data || !Array.isArray(data.tables)) throw new Error('bad');
+        if (!confirm('استبدال البيانات الحالية بالنسخة دي؟')) { ev.target.value = ''; return; }
+        if (!Array.isArray(data.archive)) data.archive = [];
+        state = data;
+        save(); render();
+        toast('⬆️ اتسترجعت النسخة');
+      } catch { alert('الملف مش صحيح'); }
+      ev.target.value = '';
+    };
+    reader.readAsText(file);
+  }
+
+  /* =====================================================================================
+     Toast + autosave indicator (small UI feedback helpers)
+     ===================================================================================== */
+  let toastTimer;
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.remove('opacity-0', 'translate-y-2');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.add('opacity-0', 'translate-y-2'), 1800);
+  }
+  let savedTimer;
+  function flashSaved() {
+    const el = document.getElementById('savedFlag');
+    if (!el) return;
+    el.classList.remove('opacity-0');
+    clearTimeout(savedTimer);
+    savedTimer = setTimeout(() => el.classList.add('opacity-0'), 1200);
   }
 
   /* =====================================================================================
@@ -412,6 +621,8 @@
     const empty = document.getElementById('emptyState');
 
     document.getElementById('cafeTotal').textContent = fmt(cafeTotal());
+    const ac = document.getElementById('archCount');
+    if (ac) ac.textContent = state.archive.length ? `(${state.archive.length})` : '';
     empty.classList.toggle('hidden', state.tables.length > 0);
 
     container.innerHTML = state.tables.map(table => renderTable(table)).join('');
