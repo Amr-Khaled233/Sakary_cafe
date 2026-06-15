@@ -27,11 +27,14 @@ export const api = {
   // Tables (the GET returns the full nested tree with totals)
   getTables: () => request('/tables'),
   addTable: (tableName) => request('/tables', { method: 'POST', body: { tableName } }),
+  renameTable: (id, tableName) => request(`/tables/${id}`, { method: 'PUT', body: { tableName } }),
   deleteTable: (id) => request(`/tables/${id}`, { method: 'DELETE' }),
 
   // Customers
   addCustomer: (tableId, customerName) =>
     request('/customers', { method: 'POST', body: { tableId, customerName } }),
+  renameCustomer: (id, customerName) =>
+    request(`/customers/${id}`, { method: 'PUT', body: { customerName } }),
   overridePrice: (id, customOverridePrice) =>
     request(`/customers/${id}`, { method: 'PUT', body: { customOverridePrice } }),
   togglePaid: (id, isPaid) =>

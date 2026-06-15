@@ -14,16 +14,19 @@ router.post('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// PUT /api/customers/:id  -> set/clear the manual final-price override.
-// Send { customOverridePrice: number } to override, or { customOverridePrice: null } to clear.
+// PUT /api/customers/:id  -> rename the customer and/or set/clear the manual
+// final-price override. Send any of:
+//   { customerName: "..." }            -> rename
+//   { customOverridePrice: number }    -> override final price
+//   { customOverridePrice: null | "" } -> clear the override
 router.put('/:id', async (req, res, next) => {
   try {
-    const { customOverridePrice } = req.body;
-    const customer = await Customer.findByIdAndUpdate(
-      req.params.id,
-      { customOverridePrice: customOverridePrice === '' ? null : customOverridePrice },
-      { new: true }
-    );
+    const update = {};
+    if (req.body.customerName !== undefined) update.customerName = req.body.customerName;
+    if (req.body.customOverridePrice !== undefined) {
+      update.customOverridePrice = req.body.customOverridePrice === '' ? null : req.body.customOverridePrice;
+    }
+    const customer = await Customer.findByIdAndUpdate(req.params.id, update, { new: true });
     if (!customer) return res.status(404).json({ message: 'الزبون غير موجود' });
     res.json(customer);
   } catch (err) { next(err); }

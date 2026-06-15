@@ -3,8 +3,11 @@
   "buildCommand": "npm --prefix client install && npm --prefix client run build",
   "outputDirectory": "client/dist",
   "functions": {
-    "api/[...slug].js": {
+    "api/index.js": {
       "includeFiles": "server/**"
     }
-  }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index" }
+  ]
 }

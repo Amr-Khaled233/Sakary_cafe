@@ -37,13 +37,6 @@ export default function AdminPanel({ menu, reloadMenu, reloadTables }) {
     await api.deleteMenuItem(id);
     await reloadMenu();
   }
-  async function resetShift() {
-    if (!confirm('سيتم مسح كل الطاولات والطلبات لبدء وردية جديدة. متأكد؟')) return;
-    await api.resetShift();
-    await reloadTables();
-    await loadStats();
-    alert('تمت تصفية الوردية ✅');
-  }
 
   return (
     <div className="space-y-5">
@@ -98,18 +91,6 @@ export default function AdminPanel({ menu, reloadMenu, reloadTables }) {
             +
           </button>
         </div>
-      </section>
-
-      {/* Reset shift */}
-      <section className="pt-2">
-        <button
-          onClick={resetShift}
-          className="w-full bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-red-200
-                     font-bold rounded-xl py-3 active:scale-95 transition"
-        >
-          🔄 تصفية الوردية (مسح كل الطاولات)
-        </button>
-        <p className="text-[11px] text-coffee-muted mt-1 text-center">القائمة والأسعار لا تتأثر بالتصفية.</p>
       </section>
     </div>
   );

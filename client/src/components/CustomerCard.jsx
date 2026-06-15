@@ -12,6 +12,12 @@ export default function CustomerCard({ customer, menu, reload }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const hasOverride = customer.customOverridePrice !== null && customer.customOverridePrice !== undefined;
 
+  async function renameCustomer(value) {
+    const name = value.trim();
+    if (!name || name === customer.customerName) return; // nothing changed
+    await api.renameCustomer(customer._id, name);
+    await reload();
+  }
   async function changeQty(orderId, delta) {
     await api.changeQty(orderId, delta);
     await reload();
@@ -42,7 +48,12 @@ export default function CustomerCard({ customer, menu, reload }) {
       {/* Header: name + subtotal + paid badge */}
       <div className="flex items-center gap-2 mb-2">
         <span className="text-coffee-muted">👤</span>
-        <span className="flex-1 min-w-0 font-bold truncate">{customer.customerName}</span>
+        {/* Editable customer name */}
+        <input
+          defaultValue={customer.customerName}
+          onBlur={(e) => renameCustomer(e.target.value)}
+          className="flex-1 min-w-0 bg-transparent font-bold focus:outline-none focus:bg-coffee-card rounded px-1 -mx-1"
+        />
         {customer.isPaid && (
           <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-full px-2 py-0.5">
             مدفوع ✓

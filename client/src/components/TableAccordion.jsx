@@ -16,6 +16,13 @@ export default function TableAccordion({ table, menu, reload }) {
     await reload();
   }
 
+  async function renameTable(value) {
+    const name = value.trim();
+    if (!name || name === table.tableName) return; // nothing changed
+    await api.renameTable(table._id, name);
+    await reload();
+  }
+
   async function deleteTable() {
     if (!confirm(`حذف "${table.tableName}" بكل بياناتها؟`)) return;
     await api.deleteTable(table._id);
@@ -28,8 +35,15 @@ export default function TableAccordion({ table, menu, reload }) {
       <div className="flex items-center gap-2 p-3 cursor-pointer select-none" onClick={() => setOpen((o) => !o)}>
         <span className={`text-coffee-gold text-lg transition-transform ${open ? 'rotate-90' : ''}`}>▸</span>
         <div className="flex-1 min-w-0">
-          <p className="font-extrabold text-base truncate">{table.tableName}</p>
-          <p className="text-[11px] text-coffee-muted">
+          {/* Editable table name. stopPropagation so tapping it doesn't toggle the accordion. */}
+          <input
+            defaultValue={table.tableName}
+            onClick={(e) => e.stopPropagation()}
+            onBlur={(e) => renameTable(e.target.value)}
+            className="w-full bg-transparent font-extrabold text-base focus:outline-none
+                       focus:bg-coffee-card2 rounded px-1 -mx-1"
+          />
+          <p className="text-[11px] text-coffee-muted px-1">
             {table.customers.length} {table.customers.length === 1 ? 'زبون' : 'زبائن'}
           </p>
         </div>

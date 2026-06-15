@@ -25,6 +25,17 @@ router.post('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// PUT /api/tables/:id  -> rename a table { tableName }
+router.put('/:id', async (req, res, next) => {
+  try {
+    const { tableName } = req.body;
+    if (!tableName) return res.status(400).json({ message: 'tableName مطلوب' });
+    const table = await Table.findByIdAndUpdate(req.params.id, { tableName }, { new: true });
+    if (!table) return res.status(404).json({ message: 'الطاولة غير موجودة' });
+    res.json(table);
+  } catch (err) { next(err); }
+});
+
 // DELETE /api/tables/:id  -> delete a table AND cascade delete its customers + orders.
 router.delete('/:id', async (req, res, next) => {
   try {
