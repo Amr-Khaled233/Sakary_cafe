@@ -1,0 +1,46 @@
+const express = require('express');
+const Table = require('../models/Table');
+const Customer = require('../models/Customer');
+const Order = require('../models/Order');
+const { buildActiveTablesTree } = require('../utils/build');
+
+const router = express.Router();
+
+// GET /api/tables  -> active tables, fully populated with customers + orders + totals.
+// This single call drives the whole main screen.
+router.get('/', async (req, res, next) => {
+  try {
+    const tree = await buildActiveTablesTree();
+    res.json(tree);
+  } catch (err) { next(err); }
+});
+
+// POST /api/tables  -> create a new table { tableName }
+router.post('/', async (req, res, next) => {
+  try {
+    const { tableName } = req.body;
+    if (!tableName) return res.status(400).json({ message: 'tableName مطلوب' });
+    const table = await Table.create({ tableName });
+    res.status(201).json(table);
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/tables/:id  -> delete a table AND cascade delete its customers + orders.
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const table = await Table.findById(req.params.id);
+    if (!table) return res.status(404).json({ message: 'الطاولة غير موجودة' });
+
+    // Find this table's customers, then wipe their orders, then the customers, then the table.
+    const customers = await Customer.find({ tableId: table._id }).select('_id');
+    const customerIds = customers.map((c) => c._id);
+
+    await Order.deleteMany({ customerId: { $in: customerIds } });
+    await Customer.deleteMany({ tableId: table._id });
+    await Table.deleteOne({ _id: table._id });
+
+    res.json({ message: 'تم حذف الطاولة وكل بياناتها', id: req.params.id });
+  } catch (err) { next(err); }
+});
+
+module.exports = router;
