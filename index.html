@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1c1410" />
+  <title>حساب القهوة ☕</title>
+
+  <!-- Tailwind CSS via CDN (no build step required) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Arabic font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+  <script>
+    // Tailwind theme: warm café palette + dark base
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { cairo: ['Cairo', 'sans-serif'] },
+          colors: {
+            coffee: {
+              bg:    '#1c1410',  // page background (dark espresso)
+              card:  '#2a201a',  // card surface
+              card2: '#33271f',  // raised surface
+              line:  '#43342a',  // borders
+              cream: '#f4e6d4',  // primary text
+              muted: '#b89c84',  // secondary text
+              gold:  '#d9a566',  // accent / amber
+              gold2: '#c08a4a',  // accent darker
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    html, body { font-family: 'Cairo', sans-serif; }
+    body { background: #1c1410; -webkit-tap-highlight-color: transparent; }
+    /* Hide number input spinners for a cleaner mobile look */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+    /* Smooth accordion */
+    .acc-body { transition: max-height .28s ease, opacity .2s ease; overflow: hidden; }
+    /* Prevent text selection on rapid tapping of +/- */
+    .no-select { -webkit-user-select: none; user-select: none; }
+  </style>
+</head>
+
+<body class="text-coffee-cream min-h-screen pb-28">
+
+  <!-- ============================ HEADER ============================ -->
+  <header class="sticky top-0 z-30 bg-coffee-bg/95 backdrop-blur border-b border-coffee-line">
+    <div class="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">☕</span>
+        <div>
+          <h1 class="text-lg font-extrabold leading-none">حساب القهوة</h1>
+          <p class="text-[11px] text-coffee-muted mt-0.5">إدارة الطاولات والطلبات</p>
+        </div>
+      </div>
+
+      <!-- Live grand total of the whole café -->
+      <div class="text-left">
+        <p class="text-[10px] text-coffee-muted leading-none">إجمالي الكافيه</p>
+        <p id="cafeTotal" class="text-xl font-extrabold text-coffee-gold leading-tight">0 ج</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================ MAIN ============================ -->
+  <main class="max-w-2xl mx-auto px-3 sm:px-4 pt-4">
+
+    <!-- Add table row -->
+    <div class="flex gap-2 mb-4">
+      <input id="newTableName" type="text" inputmode="text"
+             placeholder="اسم الطاولة (مثال: طاولة العيلة)"
+             class="flex-1 bg-coffee-card border border-coffee-line rounded-xl px-4 py-3 text-base
+                    placeholder:text-coffee-muted/60 focus:outline-none focus:border-coffee-gold"
+             onkeydown="if(event.key==='Enter') addTable()" />
+      <button onclick="addTable()"
+              class="no-select shrink-0 bg-coffee-gold hover:bg-coffee-gold2 active:scale-95 transition
+                     text-coffee-bg font-extrabold rounded-xl px-5 py-3 text-base">
+        + طاولة
+      </button>
+    </div>
+
+    <!-- Tables get rendered here (each table is an accordion) -->
+    <div id="tablesContainer" class="space-y-3"></div>
+
+    <!-- Empty state -->
+    <div id="emptyState" class="hidden text-center py-20">
+      <div class="text-6xl mb-3">🪑</div>
+      <p class="text-coffee-muted">لا توجد طاولات بعد.<br/>أضف أول طاولة للبدء.</p>
+    </div>
+
+    <!-- Footer actions -->
+    <div class="mt-8 flex justify-center">
+      <button onclick="resetAll()"
+              class="text-xs text-coffee-muted hover:text-red-300 underline underline-offset-4">
+        مسح كل البيانات
+      </button>
+    </div>
+  </main>
+
+  <!-- ============================ MENU MODAL (quick-select) ============================ -->
+  <div id="menuModal" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-black/60" onclick="closeMenu()"></div>
+    <div class="absolute inset-x-0 bottom-0 max-w-2xl mx-auto bg-coffee-card border-t border-coffee-line
+                rounded-t-3xl p-4 pb-6 max-h-[85vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-extrabold text-lg">اختر المشروب</h3>
+        <button onclick="closeMenu()" class="text-coffee-muted text-2xl leading-none px-2">✕</button>
+      </div>
+      <p id="menuTargetLabel" class="text-xs text-coffee-muted mb-3"></p>
+
+      <!-- Predefined menu grid: fat-finger friendly buttons -->
+      <div id="menuGrid" class="grid grid-cols-2 gap-2 mb-4"></div>
+
+      <!-- Custom item -->
+      <div class="border-t border-coffee-line pt-3">
+        <p class="text-sm font-bold mb-2 text-coffee-gold">صنف مخصص (غير موجود بالقائمة)</p>
+        <div class="flex gap-2">
+          <input id="customName" type="text" placeholder="اسم الصنف"
+                 class="flex-1 bg-coffee-card2 border border-coffee-line rounded-xl px-3 py-3
+                        placeholder:text-coffee-muted/60 focus:outline-none focus:border-coffee-gold" />
+          <input id="customPrice" type="number" inputmode="numeric" placeholder="السعر"
+                 class="w-24 bg-coffee-card2 border border-coffee-line rounded-xl px-3 py-3
+                        placeholder:text-coffee-muted/60 focus:outline-none focus:border-coffee-gold" />
+        </div>
+        <button onclick="addCustomItem()"
+                class="no-select w-full mt-2 bg-coffee-gold hover:bg-coffee-gold2 active:scale-95 transition
+                       text-coffee-bg font-extrabold rounded-xl py-3">
+          + إضافة الصنف المخصص
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  /* =====================================================================================
+     STATE MANAGEMENT
+     -------------------------------------------------------------------------------------
+     The entire app is driven by a single `state` object that is the source of truth.
+     Shape:
+       state = {
+         tables: [
+           {
+             id: string,
+             name: string,
+             open: boolean,                 // accordion expanded?
+             customers: [
+               {
+                 id: string,
+                 name: string,
+                 override: number | null,   // manual final-price override for this person
+                 items: [
+                   { id, name, price, qty } // price is editable per item
+                 ]
+               }
+             ]
+           }
+         ]
+       }
+
+     Flow:  user action  ->  mutate `state`  ->  save()  ->  render()
+     `save()` persists to localStorage; `render()` rebuilds the DOM from state.
+     We never read values back from the DOM as truth — DOM is only a view of `state`.
+     ===================================================================================== */
+
+  const STORAGE_KEY = 'cafe-hesab-v1';
+
+  // Predefined quick-select menu (name + price in EGP)
+  const MENU = [
+    { name: 'شاي',                 price: 15 },
+    { name: 'قهوة',                price: 25 },
+    { name: 'قهوة فرنساوي',        price: 40 },
+    { name: 'مياه',                price: 10 },
+    { name: 'كوفي ميكس',           price: 25 },
+    { name: 'بيبسي / بيبسي دايت',  price: 25 },
+    { name: 'سفن / سفن دايت',      price: 25 },
+    { name: 'في كولا / في كولا دايت', price: 30 },
+    { name: 'ليمون نعناع',         price: 30 },
+  ];
+
+  // Load persisted state (or start empty). Wrapped in try/catch so a corrupt
+  // localStorage value can never brick the app.
+  let state = loadState();
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) { console.warn('Could not load saved data', e); }
+    return { tables: [] };
+  }
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    catch (e) { console.warn('Could not save data', e); }
+  }
+
+  // Small unique id helper
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  /* =====================================================================================
+     CALCULATIONS (pure helpers — read from state, never mutate)
+     ===================================================================================== */
+
+  // A customer's subtotal = sum(item.price * qty), unless a manual override is set.
+  function customerSubtotal(customer) {
+    return customer.items.reduce((sum, it) => sum + (it.price * it.qty), 0);
+  }
+  function customerTotal(customer) {
+    return customer.override !== null && customer.override !== undefined
+      ? customer.override
+      : customerSubtotal(customer);
+  }
+  // A table's grand total = sum of every customer's (possibly overridden) total.
+  function tableTotal(table) {
+    return table.customers.reduce((sum, c) => sum + customerTotal(c), 0);
+  }
+  // The whole café total = sum of all tables.
+  function cafeTotal() {
+    return state.tables.reduce((sum, t) => sum + tableTotal(t), 0);
+  }
+  const fmt = (n) => `${Math.round(n * 100) / 100} ج`;
+
+  /* =====================================================================================
+     TABLE ACTIONS
+     ===================================================================================== */
+
+  function addTable() {
+    const input = document.getElementById('newTableName');
+    const name = input.value.trim() || `طاولة ${state.tables.length + 1}`;
+    state.tables.push({ id: uid(), name, open: true, customers: [] });
+    input.value = '';
+    save(); render();
+  }
+
+  function deleteTable(tableId) {
+    const t = state.tables.find(t => t.id === tableId);
+    if (!confirm(`حذف "${t.name}" بكل بياناتها؟`)) return;
+    state.tables = state.tables.filter(t => t.id !== tableId);
+    save(); render();
+  }
+
+  // "Clear" empties a table's customers but keeps the table itself.
+  function clearTable(tableId) {
+    const t = state.tables.find(t => t.id === tableId);
+    if (!t.customers.length) return;
+    if (!confirm(`تفريغ طلبات "${t.name}"؟`)) return;
+    t.customers = [];
+    save(); render();
+  }
+
+  function toggleTable(tableId) {
+    const t = state.tables.find(t => t.id === tableId);
+    t.open = !t.open;
+    save(); render();
+  }
+
+  function renameTable(tableId, value) {
+    const t = state.tables.find(t => t.id === tableId);
+    t.name = value.trim() || t.name;
+    save(); // no re-render needed; the input already shows the value
+  }
+
+  /* =====================================================================================
+     CUSTOMER ACTIONS
+     ===================================================================================== */
+
+  function addCustomer(tableId) {
+    const t = state.tables.find(t => t.id === tableId);
+    t.customers.push({ id: uid(), name: `زبون ${t.customers.length + 1}`, override: null, items: [] });
+    save(); render();
+  }
+
+  function deleteCustomer(tableId, custId) {
+    const t = state.tables.find(t => t.id === tableId);
+    t.customers = t.customers.filter(c => c.id !== custId);
+    save(); render();
+  }
+
+  function renameCustomer(tableId, custId, value) {
+    const c = findCustomer(tableId, custId);
+    c.name = value.trim() || c.name;
+    save();
+  }
+
+  // Manual override of a person's final price. Empty input clears the override.
+  function setOverride(tableId, custId, value) {
+    const c = findCustomer(tableId, custId);
+    const v = parseFloat(value);
+    c.override = (value === '' || isNaN(v)) ? null : v;
+    save(); render();
+  }
+  function clearOverride(tableId, custId) {
+    findCustomer(tableId, custId).override = null;
+    save(); render();
+  }
+
+  function findCustomer(tableId, custId) {
+    return state.tables.find(t => t.id === tableId).customers.find(c => c.id === custId);
+  }
+
+  /* =====================================================================================
+     ITEM ACTIONS
+     ===================================================================================== */
+
+  // Add an item to a customer. If the same name+price already exists, just bump quantity.
+  function addItem(tableId, custId, name, price) {
+    const c = findCustomer(tableId, custId);
+    const existing = c.items.find(it => it.name === name && it.price === price);
+    if (existing) existing.qty += 1;
+    else c.items.push({ id: uid(), name, price, qty: 1 });
+    save(); render();
+  }
+
+  function changeQty(tableId, custId, itemId, delta) {
+    const c = findCustomer(tableId, custId);
+    const it = c.items.find(i => i.id === itemId);
+    it.qty += delta;
+    if (it.qty <= 0) c.items = c.items.filter(i => i.id !== itemId); // auto-remove at 0
+    save(); render();
+  }
+
+  function removeItem(tableId, custId, itemId) {
+    const c = findCustomer(tableId, custId);
+    c.items = c.items.filter(i => i.id !== itemId);
+    save(); render();
+  }
+
+  // Edit a single item's unit price manually.
+  function editItemPrice(tableId, custId, itemId, value) {
+    const c = findCustomer(tableId, custId);
+    const it = c.items.find(i => i.id === itemId);
+    const v = parseFloat(value);
+    if (!isNaN(v) && v >= 0) it.price = v;
+    save(); render();
+  }
+
+  /* =====================================================================================
+     MENU MODAL — remembers which customer it was opened for
+     ===================================================================================== */
+
+  let menuTarget = { tableId: null, custId: null };
+
+  function openMenu(tableId, custId) {
+    menuTarget = { tableId, custId };
+    const c = findCustomer(tableId, custId);
+    const t = state.tables.find(t => t.id === tableId);
+    document.getElementById('menuTargetLabel').textContent = `الطاولة: ${t.name} — ${c.name}`;
+    document.getElementById('customName').value = '';
+    document.getElementById('customPrice').value = '';
+    document.getElementById('menuModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeMenu() {
+    document.getElementById('menuModal').classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+  function pickMenuItem(name, price) {
+    addItem(menuTarget.tableId, menuTarget.custId, name, price);
+    // Keep modal open so the user can rapidly add several drinks for the same person.
+  }
+  function addCustomItem() {
+    const name = document.getElementById('customName').value.trim();
+    const price = parseFloat(document.getElementById('customPrice').value);
+    if (!name) { alert('اكتب اسم الصنف'); return; }
+    if (isNaN(price) || price < 0) { alert('اكتب سعراً صحيحاً'); return; }
+    addItem(menuTarget.tableId, menuTarget.custId, name, price);
+    document.getElementById('customName').value = '';
+    document.getElementById('customPrice').value = '';
+  }
+
+  // Build the quick-select menu grid once.
+  function buildMenuGrid() {
+    document.getElementById('menuGrid').innerHTML = MENU.map(m => `
+      <button onclick="pickMenuItem('${escAttr(m.name)}', ${m.price})"
+              class="no-select text-right bg-coffee-card2 hover:bg-coffee-line active:scale-95 transition
+                     border border-coffee-line rounded-xl p-3">
+        <span class="block font-bold text-sm leading-tight">${escHtml(m.name)}</span>
+        <span class="block text-coffee-gold font-extrabold text-sm mt-1">${m.price} ج</span>
+      </button>
+    `).join('');
+  }
+
+  /* =====================================================================================
+     RESET
+     ===================================================================================== */
+  function resetAll() {
+    if (!confirm('سيتم مسح كل الطاولات والطلبات نهائياً. متأكد؟')) return;
+    state = { tables: [] };
+    save(); render();
+  }
+
+  /* =====================================================================================
+     RENDER — rebuild the DOM from `state`
+     ===================================================================================== */
+
+  // Escape helpers to keep user-entered names safe inside HTML / attributes.
+  function escHtml(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  function escAttr(s){ return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+
+  function render() {
+    const container = document.getElementById('tablesContainer');
+    const empty = document.getElementById('emptyState');
+
+    document.getElementById('cafeTotal').textContent = fmt(cafeTotal());
+    empty.classList.toggle('hidden', state.tables.length > 0);
+
+    container.innerHTML = state.tables.map(table => renderTable(table)).join('');
+  }
+
+  function renderTable(table) {
+    const total = tableTotal(table);
+    const count = table.customers.length;
+
+    return `
+    <section class="bg-coffee-card border border-coffee-line rounded-2xl overflow-hidden shadow-lg shadow-black/20">
+
+      <!-- Accordion header -->
+      <div class="flex items-center gap-2 p-3 cursor-pointer select-none" onclick="toggleTable('${table.id}')">
+        <span class="text-coffee-gold text-lg transition-transform ${table.open ? 'rotate-90' : ''}">▸</span>
+        <div class="flex-1 min-w-0">
+          <!-- Editable table name. stopPropagation so tapping it doesn't toggle the accordion. -->
+          <input value="${escHtml(table.name)}" onclick="event.stopPropagation()"
+                 onchange="renameTable('${table.id}', this.value)"
+                 class="w-full bg-transparent font-extrabold text-base focus:outline-none
+                        focus:bg-coffee-card2 rounded px-1 -mx-1" />
+          <p class="text-[11px] text-coffee-muted px-1">${count} ${count === 1 ? 'زبون' : 'زبائن'}</p>
+        </div>
+        <div class="text-left shrink-0">
+          <p class="text-[10px] text-coffee-muted leading-none">الإجمالي</p>
+          <p class="font-extrabold text-coffee-gold">${fmt(total)}</p>
+        </div>
+      </div>
+
+      <!-- Accordion body -->
+      <div class="acc-body ${table.open ? '' : 'max-h-0 opacity-0'}" ${table.open ? 'style="max-height:9999px"' : ''}>
+        <div class="px-3 pb-3 border-t border-coffee-line">
+
+          <!-- Customers -->
+          <div class="space-y-3 mt-3">
+            ${table.customers.map(c => renderCustomer(table, c)).join('') || `
+              <p class="text-center text-sm text-coffee-muted py-4">لا يوجد زبائن. أضف أول زبون.</p>`}
+          </div>
+
+          <!-- Table action buttons -->
+          <div class="flex gap-2 mt-3">
+            <button onclick="addCustomer('${table.id}')"
+                    class="no-select flex-1 bg-coffee-gold/15 hover:bg-coffee-gold/25 border border-coffee-gold/40
+                           text-coffee-gold font-bold rounded-xl py-3 active:scale-95 transition">
+              + إضافة زبون
+            </button>
+            <button onclick="clearTable('${table.id}')"
+                    class="no-select px-4 bg-coffee-card2 hover:bg-coffee-line border border-coffee-line
+                           text-coffee-muted rounded-xl py-3 active:scale-95 transition" title="تفريغ">
+              تفريغ
+            </button>
+            <button onclick="deleteTable('${table.id}')"
+                    class="no-select px-4 bg-red-500/15 hover:bg-red-500/25 border border-red-500/40
+                           text-red-300 rounded-xl py-3 active:scale-95 transition" title="حذف">
+              🗑
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </section>`;
+  }
+
+  function renderCustomer(table, c) {
+    const subtotal = customerSubtotal(c);
+    const hasOverride = c.override !== null && c.override !== undefined;
+    const finalTotal = customerTotal(c);
+
+    return `
+    <div class="bg-coffee-card2 border border-coffee-line rounded-xl p-3">
+
+      <!-- Customer header: name + subtotal -->
+      <div class="flex items-center gap-2 mb-2">
+        <span class="text-coffee-muted">👤</span>
+        <input value="${escHtml(c.name)}"
+               onchange="renameCustomer('${table.id}','${c.id}', this.value)"
+               class="flex-1 min-w-0 bg-transparent font-bold focus:outline-none focus:bg-coffee-card rounded px-1 -mx-1" />
+        <div class="text-left shrink-0">
+          <p class="text-[10px] text-coffee-muted leading-none">المطلوب</p>
+          <p class="font-extrabold ${hasOverride ? 'text-coffee-muted line-through text-xs' : 'text-coffee-cream'}">${fmt(subtotal)}</p>
+        </div>
+        <button onclick="deleteCustomer('${table.id}','${c.id}')"
+                class="no-select text-red-300/70 hover:text-red-300 text-lg px-1 shrink-0">✕</button>
+      </div>
+
+      <!-- Item list -->
+      <div class="space-y-1.5">
+        ${c.items.map(it => `
+          <div class="flex items-center gap-2 bg-coffee-card rounded-lg px-2 py-1.5">
+            <span class="flex-1 min-w-0 truncate text-sm">${escHtml(it.name)}</span>
+
+            <!-- Editable unit price -->
+            <div class="flex items-center gap-0.5 shrink-0">
+              <input type="number" inputmode="numeric" value="${it.price}"
+                     onchange="editItemPrice('${table.id}','${c.id}','${it.id}', this.value)"
+                     class="w-12 bg-coffee-card2 border border-coffee-line rounded text-center text-xs py-1
+                            focus:outline-none focus:border-coffee-gold" />
+              <span class="text-[10px] text-coffee-muted">ج</span>
+            </div>
+
+            <!-- Quantity stepper: big, fat-finger-friendly -->
+            <div class="flex items-center gap-1 shrink-0 no-select">
+              <button onclick="changeQty('${table.id}','${c.id}','${it.id}', -1)"
+                      class="w-8 h-8 rounded-lg bg-coffee-card2 border border-coffee-line text-lg font-bold
+                             active:scale-90 transition leading-none">−</button>
+              <span class="w-6 text-center font-extrabold">${it.qty}</span>
+              <button onclick="changeQty('${table.id}','${c.id}','${it.id}', 1)"
+                      class="w-8 h-8 rounded-lg bg-coffee-gold text-coffee-bg text-lg font-bold
+                             active:scale-90 transition leading-none">+</button>
+            </div>
+
+            <!-- Line total -->
+            <span class="w-12 text-left text-xs font-bold text-coffee-gold shrink-0">${fmt(it.price * it.qty)}</span>
+          </div>
+        `).join('') || `<p class="text-xs text-coffee-muted py-1">لا توجد طلبات بعد.</p>`}
+      </div>
+
+      <!-- Add drink + manual override row -->
+      <div class="flex items-center gap-2 mt-2.5">
+        <button onclick="openMenu('${table.id}','${c.id}')"
+                class="no-select flex-1 bg-coffee-gold/15 hover:bg-coffee-gold/25 border border-coffee-gold/40
+                       text-coffee-gold text-sm font-bold rounded-lg py-2.5 active:scale-95 transition">
+          + مشروب
+        </button>
+
+        <!-- Manual final-price override for this person -->
+        <div class="flex items-center gap-1 shrink-0">
+          <span class="text-[10px] text-coffee-muted">سعر يدوي</span>
+          <input type="number" inputmode="numeric" placeholder="—"
+                 value="${hasOverride ? c.override : ''}"
+                 onchange="setOverride('${table.id}','${c.id}', this.value)"
+                 class="w-16 bg-coffee-card border ${hasOverride ? 'border-coffee-gold' : 'border-coffee-line'}
+                        rounded-lg text-center text-sm py-2 focus:outline-none focus:border-coffee-gold" />
+        </div>
+      </div>
+
+      <!-- Final total line (shows override clearly when active) -->
+      <div class="flex items-center justify-between mt-2 pt-2 border-t border-coffee-line/60">
+        <span class="text-xs ${hasOverride ? 'text-coffee-gold' : 'text-coffee-muted'}">
+          ${hasOverride ? 'الإجمالي النهائي (سعر يدوي)' : 'إجمالي الزبون'}
+          ${hasOverride ? `<button onclick="clearOverride('${table.id}','${c.id}')" class="underline mr-1">إلغاء</button>` : ''}
+        </span>
+        <span class="font-extrabold text-coffee-gold">${fmt(finalTotal)}</span>
+      </div>
+    </div>`;
+  }
+
+  /* =====================================================================================
+     INIT
+     ===================================================================================== */
+  buildMenuGrid();
+  render();
+  </script>
+</body>
+</html>
