@@ -4,7 +4,7 @@ import QuickMenu from './QuickMenu';
 
 /**
  * One customer inside a table: their order list, +/- steppers, a manual
- * final-price override, a "paid" toggle, and the button that opens QuickMenu.
+ * final-price override, and the button that opens QuickMenu.
  * `customer` arrives already enriched by the backend with `subtotal`,
  * `finalTotal` and its `orders` array.
  */
@@ -34,18 +34,14 @@ export default function CustomerCard({ customer, menu, reload }) {
     await api.overridePrice(customer._id, null);
     await reload();
   }
-  async function togglePaid() {
-    await api.togglePaid(customer._id, !customer.isPaid);
-    await reload();
-  }
   async function removeCustomer() {
     await api.deleteCustomer(customer._id);
     await reload();
   }
 
   return (
-    <div className={`bg-coffee-card2 border rounded-xl p-3 ${customer.isPaid ? 'border-emerald-500/40' : 'border-coffee-line'}`}>
-      {/* Header: name + subtotal + paid badge */}
+    <div className="bg-coffee-card2 border border-coffee-line rounded-xl p-3">
+      {/* Header: name + subtotal */}
       <div className="flex items-center gap-2 mb-2">
         <span className="text-coffee-muted">👤</span>
         {/* Editable customer name */}
@@ -54,11 +50,6 @@ export default function CustomerCard({ customer, menu, reload }) {
           onBlur={(e) => renameCustomer(e.target.value)}
           className="flex-1 min-w-0 bg-transparent font-bold focus:outline-none focus:bg-coffee-card rounded px-1 -mx-1"
         />
-        {customer.isPaid && (
-          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-full px-2 py-0.5">
-            مدفوع ✓
-          </span>
-        )}
         <div className="text-left shrink-0">
           <p className="text-[10px] text-coffee-muted leading-none">المطلوب</p>
           <p className={`font-extrabold ${hasOverride ? 'text-coffee-muted line-through text-xs' : 'text-coffee-cream'}`}>
@@ -119,25 +110,13 @@ export default function CustomerCard({ customer, menu, reload }) {
         </div>
       </div>
 
-      {/* Final total + paid toggle */}
+      {/* Final total for this person */}
       <div className="flex items-center justify-between mt-2 pt-2 border-t border-coffee-line/60">
         <span className={`text-xs ${hasOverride ? 'text-coffee-gold' : 'text-coffee-muted'}`}>
           {hasOverride ? 'الإجمالي النهائي (سعر يدوي)' : 'إجمالي الزبون'}
           {hasOverride && <button onClick={clearOverride} className="underline mr-1">إلغاء</button>}
         </span>
-        <div className="flex items-center gap-2">
-          <span className="font-extrabold text-coffee-gold">{fmt(customer.finalTotal)}</span>
-          <button
-            onClick={togglePaid}
-            className={`text-xs font-bold rounded-lg px-3 py-1.5 border transition active:scale-95 ${
-              customer.isPaid
-                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
-                : 'bg-coffee-card border-coffee-line text-coffee-muted'
-            }`}
-          >
-            {customer.isPaid ? 'مدفوع' : 'تحديد كمدفوع'}
-          </button>
-        </div>
+        <span className="font-extrabold text-coffee-gold text-lg">{fmt(customer.finalTotal)}</span>
       </div>
 
       {menuOpen && (

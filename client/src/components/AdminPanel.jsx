@@ -1,24 +1,14 @@
-import { useEffect, useState } from 'react';
-import { api, fmt } from '../api';
+import { useState } from 'react';
+import { api } from '../api';
 
 /**
- * Admin control panel (لوحة التحكم):
- *  - Shift summary: paid revenue, pending revenue, active tables, customer counts.
- *  - Global menu editor: edit prices/names, add and delete items.
- *  - "Reset Shift": wipes all tables/customers/orders for a fresh day.
- *
- * Stats are fetched on mount and after a reset; the menu editor refreshes the
- * shared menu (so the quick-select grid updates too) via `reloadMenu`.
+ * Admin control panel (لوحة التحكم) — menu only.
+ * Shows the drinks and their prices, lets you edit a name/price, add a new drink,
+ * or delete one. Changes refresh the shared menu so the quick-select grid updates.
  */
 export default function AdminPanel({ menu, reloadMenu, reloadTables }) {
-  const [stats, setStats] = useState(null);
   const [newName, setNewName] = useState('');
   const [newPrice, setNewPrice] = useState('');
-
-  async function loadStats() {
-    try { setStats(await api.getStats()); } catch (e) { console.error(e); }
-  }
-  useEffect(() => { loadStats(); }, []);
 
   async function saveItem(id, name, price) {
     await api.updateMenuItem(id, { name, price: parseFloat(price) });
@@ -40,26 +30,8 @@ export default function AdminPanel({ menu, reloadMenu, reloadTables }) {
 
   return (
     <div className="space-y-5">
-      {/* Shift summary */}
       <section>
-        <h2 className="font-extrabold mb-2">ملخص الوردية</h2>
-        <div className="grid grid-cols-2 gap-2">
-          <Stat label="إجمالي المدفوع" value={fmt(stats?.totalRevenue)} accent />
-          <Stat label="متبقي (غير مدفوع)" value={fmt(stats?.pendingRevenue)} />
-          <Stat label="الطاولات النشطة" value={stats?.activeTables ?? '—'} />
-          <Stat label="زبائن مدفوعون" value={`${stats?.paidCustomers ?? 0} / ${stats?.totalCustomers ?? 0}`} />
-        </div>
-        <button
-          onClick={loadStats}
-          className="mt-2 text-xs text-coffee-muted underline underline-offset-4"
-        >
-          تحديث الأرقام
-        </button>
-      </section>
-
-      {/* Menu editor */}
-      <section>
-        <h2 className="font-extrabold mb-2">قائمة الأسعار</h2>
+        <h2 className="font-extrabold mb-2">قائمة المشروبات والأسعار</h2>
         <div className="space-y-2">
           {menu.map((m) => (
             <MenuRow key={m._id} item={m} onSave={saveItem} onDelete={deleteItem} />
@@ -71,7 +43,7 @@ export default function AdminPanel({ menu, reloadMenu, reloadTables }) {
           <input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            placeholder="صنف جديد"
+            placeholder="مشروب جديد"
             className="flex-1 bg-coffee-card border border-coffee-line rounded-xl px-3 py-2.5
                        placeholder:text-coffee-muted/60 focus:outline-none focus:border-coffee-gold"
           />
@@ -92,15 +64,6 @@ export default function AdminPanel({ menu, reloadMenu, reloadTables }) {
           </button>
         </div>
       </section>
-    </div>
-  );
-}
-
-function Stat({ label, value, accent }) {
-  return (
-    <div className="bg-coffee-card border border-coffee-line rounded-xl p-3">
-      <p className="text-[11px] text-coffee-muted">{label}</p>
-      <p className={`text-lg font-extrabold ${accent ? 'text-coffee-gold' : 'text-coffee-cream'}`}>{value}</p>
     </div>
   );
 }
