@@ -3,9 +3,8 @@ import { fmt } from '../api';
 /**
  * Admin-only summary shown at the very bottom of the tables tab.
  * For each table it aggregates how much of every drink was ordered (summed
- * across all that table's customers), with quantity + amount. Then an overall
- * total per drink across all tables. Computed purely from the tables tree —
- * no extra API call.
+ * across all that table's customers), with quantity + amount. Computed purely
+ * from the tables tree — no extra API call.
  */
 export default function TablesSummary({ tables }) {
   if (!tables || tables.length === 0) return null;
@@ -26,20 +25,6 @@ export default function TablesSummary({ tables }) {
       .sort((a, b) => b.qty - a.qty);
     return { table: t, items };
   });
-
-  // Overall across all tables
-  const overall = new Map();
-  for (const { items } of perTable) {
-    for (const it of items) {
-      const cur = overall.get(it.name) || { qty: 0, amount: 0 };
-      cur.qty += it.qty;
-      cur.amount += it.amount;
-      overall.set(it.name, cur);
-    }
-  }
-  const overallItems = [...overall.entries()]
-    .map(([name, v]) => ({ name, ...v }))
-    .sort((a, b) => b.qty - a.qty);
 
   const Row = ({ name, qty, amount }) => (
     <div className="flex items-center justify-between text-sm bg-coffee-card2 rounded-lg px-2 py-1.5">
@@ -72,15 +57,6 @@ export default function TablesSummary({ tables }) {
           </div>
         ))}
       </div>
-
-      {overallItems.length > 0 && (
-        <div className="bg-coffee-gold/10 border border-coffee-gold/40 rounded-2xl p-3 mt-3">
-          <p className="font-extrabold text-coffee-gold mb-2">الإجمالي العام لكل مشروب</p>
-          <div className="space-y-1">
-            {overallItems.map((it) => <Row key={it.name} {...it} />)}
-          </div>
-        </div>
-      )}
     </section>
   );
 }
