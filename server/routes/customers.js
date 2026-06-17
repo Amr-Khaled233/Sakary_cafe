@@ -8,12 +8,22 @@ const { requireAdmin } = require('../middleware/auth');
 const router = express.Router();
 
 // POST /api/customers  -> add a customer to a table { tableId, customerName }
-// Allowed for any logged-in role (a User adds themselves by name).
+// Find-or-create: if someone with the same name already exists on that table,
+// return THEM (so a User re-entering the same name resumes their existing bill
+// instead of creating a duplicate). Otherwise create a new customer.
+// Allowed for any logged-in role.
 router.post('/', async (req, res, next) => {
   try {
     const { tableId, customerName } = req.body;
     if (!tableId || !customerName) return res.status(400).json({ message: 'tableId و customerName مطلوبين' });
-    const customer = await Customer.create({ tableId, customerName });
+    const name = String(customerName).trim();
+
+    // Case-insensitive exact match on the same table (collation strength 2).
+    let customer = await Customer.findOne({ tableId, customerName: name })
+      .collation({ locale: 'ar', strength: 2 });
+    if (customer) return res.status(200).json(customer); // resume existing
+
+    customer = await Customer.create({ tableId, customerName: name });
     res.status(201).json(customer);
   } catch (err) { next(err); }
 });
