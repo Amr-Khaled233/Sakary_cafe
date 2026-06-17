@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
-import { setAuth } from '../auth';
+import { setAuth, isAuthed } from '../auth';
 
 /**
  * Role-selection landing page (صفحة اختيار الدخول).
@@ -14,6 +14,11 @@ export default function Landing() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+
+  // Already logged in (e.g. after a refresh)? Skip the landing page.
+  useEffect(() => {
+    if (isAuthed()) navigate('/app', { replace: true });
+  }, [navigate]);
 
   async function adminLogin(e) {
     e.preventDefault();
