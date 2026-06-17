@@ -5,6 +5,7 @@ import { isAdmin, logout } from '../auth';
 import TableAccordion from '../components/TableAccordion';
 import AdminPanel from '../components/AdminPanel';
 import UserView from '../components/UserView';
+import TablesSummary from '../components/TablesSummary';
 
 /**
  * Main app (after login). Same data flow as before — the backend tree is the
@@ -157,6 +158,9 @@ export default function CafeApp() {
                 </p>
               </div>
             )}
+
+            {/* Per-table drink breakdown at the very bottom (Admin) */}
+            <TablesSummary tables={tables} />
           </>
         )}
       </main>
