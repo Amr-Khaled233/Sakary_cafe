@@ -59,7 +59,9 @@ export default function AdminPanel({ menu, reloadMenu, reloadTables }) {
 
         <div className="space-y-2">
           {menu.map((m) => (
-            <MenuRow key={m._id} item={m} onSave={saveItem} onDelete={deleteItem} />
+            // Key includes price/name so an external change (e.g. bulk +5/-5) remounts
+            // the row with fresh values; local typing doesn't change the key.
+            <MenuRow key={`${m._id}-${m.price}-${m.name}`} item={m} onSave={saveItem} onDelete={deleteItem} />
           ))}
         </div>
 
