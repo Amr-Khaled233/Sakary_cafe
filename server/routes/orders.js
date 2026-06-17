@@ -1,5 +1,6 @@
 const express = require('express');
 const Order = require('../models/Order');
+const { requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -25,8 +26,8 @@ router.post('/', async (req, res, next) => {
 
 // PUT /api/orders/:id  -> change quantity.
 // Accepts { delta: +1 | -1 } for the +/- buttons, or { quantity: N } to set absolutely.
-// If the resulting quantity drops to 0 or below, the item is removed.
-router.put('/:id', async (req, res, next) => {
+// If the resulting quantity drops to 0 or below, the item is removed.  (Admin only)
+router.put('/:id', requireAdmin, async (req, res, next) => {
   try {
     const { delta, quantity } = req.body;
     const order = await Order.findById(req.params.id);
@@ -44,8 +45,8 @@ router.put('/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// DELETE /api/orders/:id  -> remove an item entirely
-router.delete('/:id', async (req, res, next) => {
+// DELETE /api/orders/:id  -> remove an item entirely  (Admin only)
+router.delete('/:id', requireAdmin, async (req, res, next) => {
   try {
     const order = await Order.findByIdAndDelete(req.params.id);
     if (!order) return res.status(404).json({ message: 'الصنف غير موجود' });

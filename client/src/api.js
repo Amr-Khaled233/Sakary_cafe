@@ -2,14 +2,28 @@
 // Vite proxies to the backend in dev (see vite.config.js). Keeping all network
 // code in one file means components never deal with fetch/JSON/error plumbing.
 
+import { getToken, logout } from './auth';
+
 const BASE = '/api';
 
 async function request(path, { method = 'GET', body } = {}) {
+  const token = getToken();
+  const headers = {};
+  if (body) headers['Content-Type'] = 'application/json';
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
   const res = await fetch(BASE + path, {
     method,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
+
+  // A 401 on a normal call means the session expired/invalid -> back to landing.
+  // (We skip this for /auth calls so a wrong password just shows an error.)
+  if (res.status === 401 && !path.startsWith('/auth')) {
+    logout();
+    window.location.assign('/');
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message || `Request failed (${res.status})`);
@@ -18,6 +32,10 @@ async function request(path, { method = 'GET', body } = {}) {
 }
 
 export const api = {
+  // Auth
+  adminLogin: (password) => request('/auth/admin-login', { method: 'POST', body: { password } }),
+  userLogin: () => request('/auth/user-login', { method: 'POST' }),
+
   // Menu
   getMenu: () => request('/menu'),
   addMenuItem: (data) => request('/menu', { method: 'POST', body: data }),

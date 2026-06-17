@@ -1,9 +1,10 @@
 const express = require('express');
 const Menu = require('../models/Menu');
+const { requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
-// GET /api/menu  -> all menu items (default first, then custom)
+// GET /api/menu  -> all menu items (default first, then custom). Any logged-in role.
 router.get('/', async (req, res, next) => {
   try {
     const items = await Menu.find().sort({ isDefault: -1, createdAt: 1 });
@@ -11,8 +12,8 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// POST /api/menu  -> add a custom menu item { name, price }
-router.post('/', async (req, res, next) => {
+// POST /api/menu  -> add a custom menu item { name, price }  (Admin only)
+router.post('/', requireAdmin, async (req, res, next) => {
   try {
     const { name, price } = req.body;
     if (!name || price == null) return res.status(400).json({ message: 'name و price مطلوبين' });
@@ -21,8 +22,8 @@ router.post('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// PUT /api/menu/:id  -> edit a menu item's name/price (used by admin to fix prices)
-router.put('/:id', async (req, res, next) => {
+// PUT /api/menu/:id  -> edit a menu item's name/price  (Admin only)
+router.put('/:id', requireAdmin, async (req, res, next) => {
   try {
     const { name, price } = req.body;
     const update = {};
@@ -34,8 +35,8 @@ router.put('/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// DELETE /api/menu/:id  -> remove a menu item
-router.delete('/:id', async (req, res, next) => {
+// DELETE /api/menu/:id  -> remove a menu item  (Admin only)
+router.delete('/:id', requireAdmin, async (req, res, next) => {
   try {
     const item = await Menu.findByIdAndDelete(req.params.id);
     if (!item) return res.status(404).json({ message: 'الصنف غير موجود' });

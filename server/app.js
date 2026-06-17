@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const { ensureDB } = require('./config/db');
+const { requireAuth } = require('./middleware/auth');
 
 // The configured Express app, with NO app.listen(). This lets us reuse it both
 // for local dev (server.js) and as a Vercel serverless handler (../api/index.js).
@@ -21,12 +22,18 @@ app.use(async (req, res, next) => {
 });
 
 /* ------------------------------- Routes ------------------------------- */
+// Public routes (no token needed): health check + login.
+app.get('/api/health', (req, res) => res.json({ ok: true }));
+app.use('/api/auth', require('./routes/auth'));
+
+// Everything below this line requires a valid token (Admin or User).
+// Individual routes additionally enforce requireAdmin where needed.
+app.use('/api', requireAuth);
 app.use('/api/menu', require('./routes/menu'));
 app.use('/api/tables', require('./routes/tables'));
 app.use('/api/customers', require('./routes/customers'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/admin', require('./routes/admin'));
-app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 /* ------------------------- Central error handler ---------------------- */
 app.use((err, req, res, next) => {

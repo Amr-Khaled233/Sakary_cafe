@@ -1,10 +1,12 @@
 const express = require('express');
 const Customer = require('../models/Customer');
 const Order = require('../models/Order');
+const { requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
 // POST /api/customers  -> add a customer to a table { tableId, customerName }
+// Allowed for any logged-in role (a User adds themselves by name).
 router.post('/', async (req, res, next) => {
   try {
     const { tableId, customerName } = req.body;
@@ -19,7 +21,8 @@ router.post('/', async (req, res, next) => {
 //   { customerName: "..." }            -> rename
 //   { customOverridePrice: number }    -> override final price
 //   { customOverridePrice: null | "" } -> clear the override
-router.put('/:id', async (req, res, next) => {
+// (Admin only — Users cannot rename others or override prices.)
+router.put('/:id', requireAdmin, async (req, res, next) => {
   try {
     const update = {};
     if (req.body.customerName !== undefined) update.customerName = req.body.customerName;
@@ -32,8 +35,8 @@ router.put('/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// PATCH /api/customers/:id/paid  -> mark as paid. Body { isPaid } optional; toggles if omitted.
-router.patch('/:id/paid', async (req, res, next) => {
+// PATCH /api/customers/:id/paid  -> mark as paid.  (Admin only)
+router.patch('/:id/paid', requireAdmin, async (req, res, next) => {
   try {
     const customer = await Customer.findById(req.params.id);
     if (!customer) return res.status(404).json({ message: 'الزبون غير موجود' });
@@ -43,8 +46,8 @@ router.patch('/:id/paid', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// DELETE /api/customers/:id  -> remove a customer and cascade delete their orders.
-router.delete('/:id', async (req, res, next) => {
+// DELETE /api/customers/:id  -> remove a customer + their orders.  (Admin only)
+router.delete('/:id', requireAdmin, async (req, res, next) => {
   try {
     const customer = await Customer.findByIdAndDelete(req.params.id);
     if (!customer) return res.status(404).json({ message: 'الزبون غير موجود' });

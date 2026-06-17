@@ -7,7 +7,7 @@ import CustomerCard from './CustomerCard';
  * state — it doesn't need to live on the server. Inside it renders the table's
  * CustomerCards plus actions to add a customer or delete the whole table.
  */
-export default function TableAccordion({ table, menu, reload }) {
+export default function TableAccordion({ table, menu, reload, admin }) {
   const [open, setOpen] = useState(true);
 
   async function addCustomer() {
@@ -35,14 +35,18 @@ export default function TableAccordion({ table, menu, reload }) {
       <div className="flex items-center gap-2 p-3 cursor-pointer select-none" onClick={() => setOpen((o) => !o)}>
         <span className={`text-coffee-gold text-lg transition-transform ${open ? 'rotate-90' : ''}`}>▸</span>
         <div className="flex-1 min-w-0">
-          {/* Editable table name. stopPropagation so tapping it doesn't toggle the accordion. */}
-          <input
-            defaultValue={table.tableName}
-            onClick={(e) => e.stopPropagation()}
-            onBlur={(e) => renameTable(e.target.value)}
-            className="w-full bg-transparent font-extrabold text-base focus:outline-none
-                       focus:bg-coffee-card2 rounded px-1 -mx-1"
-          />
+          {/* Editable table name for Admin; read-only text for User. */}
+          {admin ? (
+            <input
+              defaultValue={table.tableName}
+              onClick={(e) => e.stopPropagation()}
+              onBlur={(e) => renameTable(e.target.value)}
+              className="w-full bg-transparent font-extrabold text-base focus:outline-none
+                         focus:bg-coffee-card2 rounded px-1 -mx-1"
+            />
+          ) : (
+            <p className="font-extrabold text-base truncate px-1">{table.tableName}</p>
+          )}
           <p className="text-[11px] text-coffee-muted px-1">
             {table.customers.length} {table.customers.length === 1 ? 'زبون' : 'زبائن'}
           </p>
@@ -61,12 +65,13 @@ export default function TableAccordion({ table, menu, reload }) {
               <p className="text-center text-sm text-coffee-muted py-4">لا يوجد زبائن. أضف أول زبون.</p>
             ) : (
               table.customers.map((c) => (
-                <CustomerCard key={c._id} customer={c} menu={menu} reload={reload} />
+                <CustomerCard key={c._id} customer={c} menu={menu} reload={reload} admin={admin} />
               ))
             )}
           </div>
 
           <div className="flex gap-2 mt-3">
+            {/* Both roles can add a customer (a User adds themselves by name). */}
             <button
               onClick={addCustomer}
               className="flex-1 bg-coffee-gold/15 hover:bg-coffee-gold/25 border border-coffee-gold/40
@@ -74,13 +79,16 @@ export default function TableAccordion({ table, menu, reload }) {
             >
               + إضافة زبون
             </button>
-            <button
-              onClick={deleteTable}
-              className="px-4 bg-red-500/15 hover:bg-red-500/25 border border-red-500/40
-                         text-red-300 rounded-xl py-3 active:scale-95 transition"
-            >
-              🗑 حذف
-            </button>
+            {/* Deleting a table is Admin only. */}
+            {admin && (
+              <button
+                onClick={deleteTable}
+                className="px-4 bg-red-500/15 hover:bg-red-500/25 border border-red-500/40
+                           text-red-300 rounded-xl py-3 active:scale-95 transition"
+              >
+                🗑 حذف
+              </button>
+            )}
           </div>
         </div>
       )}

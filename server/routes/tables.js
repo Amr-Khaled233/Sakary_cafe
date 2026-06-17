@@ -3,6 +3,7 @@ const Table = require('../models/Table');
 const Customer = require('../models/Customer');
 const Order = require('../models/Order');
 const { buildActiveTablesTree } = require('../utils/build');
+const { requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -15,8 +16,8 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// POST /api/tables  -> create a new table { tableName }
-router.post('/', async (req, res, next) => {
+// POST /api/tables  -> create a new table { tableName }  (Admin only)
+router.post('/', requireAdmin, async (req, res, next) => {
   try {
     const { tableName } = req.body;
     if (!tableName) return res.status(400).json({ message: 'tableName مطلوب' });
@@ -25,8 +26,8 @@ router.post('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// PUT /api/tables/:id  -> rename a table { tableName }
-router.put('/:id', async (req, res, next) => {
+// PUT /api/tables/:id  -> rename a table { tableName }  (Admin only)
+router.put('/:id', requireAdmin, async (req, res, next) => {
   try {
     const { tableName } = req.body;
     if (!tableName) return res.status(400).json({ message: 'tableName مطلوب' });
@@ -36,8 +37,8 @@ router.put('/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// DELETE /api/tables/:id  -> delete a table AND cascade delete its customers + orders.
-router.delete('/:id', async (req, res, next) => {
+// DELETE /api/tables/:id  -> delete a table + cascade its customers/orders.  (Admin only)
+router.delete('/:id', requireAdmin, async (req, res, next) => {
   try {
     const table = await Table.findById(req.params.id);
     if (!table) return res.status(404).json({ message: 'الطاولة غير موجودة' });

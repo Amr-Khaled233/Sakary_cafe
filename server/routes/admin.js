@@ -3,8 +3,12 @@ const Table = require('../models/Table');
 const Customer = require('../models/Customer');
 const Order = require('../models/Order');
 const { finalTotalOf } = require('../utils/build');
+const { requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
+
+// Everything under /api/admin is Admin-only.
+router.use(requireAdmin);
 
 // GET /api/admin/stats  -> daily/shift summary:
 //   - totalRevenue: sum of final totals of all PAID customers
