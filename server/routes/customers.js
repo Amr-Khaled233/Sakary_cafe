@@ -1,6 +1,8 @@
 const express = require('express');
 const Customer = require('../models/Customer');
 const Order = require('../models/Order');
+const Table = require('../models/Table');
+const { finalTotalOf } = require('../utils/build');
 const { requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
@@ -13,6 +15,20 @@ router.post('/', async (req, res, next) => {
     if (!tableId || !customerName) return res.status(400).json({ message: 'tableId و customerName مطلوبين' });
     const customer = await Customer.create({ tableId, customerName });
     res.status(201).json(customer);
+  } catch (err) { next(err); }
+});
+
+// GET /api/customers/:id  -> ONE customer enriched with their orders + totals
+// + their table name. Used by the User view so a User only ever fetches their
+// own data (never the whole tree). Any logged-in role.
+router.get('/:id', async (req, res, next) => {
+  try {
+    const customer = await Customer.findById(req.params.id).lean();
+    if (!customer) return res.status(404).json({ message: 'الزبون غير موجود' });
+    const orders = await Order.find({ customerId: customer._id }).lean();
+    const { subtotal, finalTotal } = finalTotalOf(customer, orders);
+    const table = await Table.findById(customer.tableId).lean();
+    res.json({ ...customer, orders, subtotal, finalTotal, tableName: table ? table.tableName : '' });
   } catch (err) { next(err); }
 });
 

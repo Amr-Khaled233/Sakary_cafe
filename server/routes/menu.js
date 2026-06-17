@@ -12,6 +12,20 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /api/menu/adjust  -> add `delta` (e.g. +5 or -5) to EVERY menu item's price.
+// Floors at 0 so prices never go negative. Returns the updated menu.  (Admin only)
+// (Defined before "/:id" routes; it's a distinct path so ordering is safe anyway.)
+router.post('/adjust', requireAdmin, async (req, res, next) => {
+  try {
+    const delta = Number(req.body.delta);
+    if (!delta || isNaN(delta)) return res.status(400).json({ message: 'delta مطلوب' });
+    // Aggregation-pipeline update: price = max(0, price + delta)
+    await Menu.updateMany({}, [{ $set: { price: { $max: [0, { $add: ['$price', delta] }] } } }]);
+    const items = await Menu.find().sort({ isDefault: -1, createdAt: 1 });
+    res.json(items);
+  } catch (err) { next(err); }
+});
+
 // POST /api/menu  -> add a custom menu item { name, price }  (Admin only)
 router.post('/', requireAdmin, async (req, res, next) => {
   try {

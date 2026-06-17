@@ -27,11 +27,36 @@ export default function AdminPanel({ menu, reloadMenu, reloadTables }) {
     await api.deleteMenuItem(id);
     await reloadMenu();
   }
+  // Add/subtract a fixed amount to EVERY drink at once (e.g. +5 then -5 to revert).
+  async function adjustAll(delta) {
+    await api.adjustMenu(delta);
+    await reloadMenu();
+    await reloadTables();
+  }
 
   return (
     <div className="space-y-5">
       <section>
         <h2 className="font-extrabold mb-2">قائمة المشروبات والأسعار</h2>
+
+        {/* Bulk price adjust: +5 to all / -5 to all (to revert) */}
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={() => adjustAll(5)}
+            className="flex-1 bg-coffee-gold/15 border border-coffee-gold/40 text-coffee-gold font-bold
+                       rounded-xl py-2.5 active:scale-95 transition"
+          >
+            +5 ج لكل المشروبات
+          </button>
+          <button
+            onClick={() => adjustAll(-5)}
+            className="flex-1 bg-coffee-card border border-coffee-line text-coffee-cream font-bold
+                       rounded-xl py-2.5 active:scale-95 transition"
+          >
+            −5 ج لكل المشروبات
+          </button>
+        </div>
+
         <div className="space-y-2">
           {menu.map((m) => (
             <MenuRow key={m._id} item={m} onSave={saveItem} onDelete={deleteItem} />

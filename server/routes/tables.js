@@ -16,6 +16,16 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/tables/names  -> just [{ _id, tableName }] for active tables.
+// Used by the User table-picker so Users don't download everyone's data.
+// (Defined before any "/:id" route so "names" isn't treated as an id.)
+router.get('/names', async (req, res, next) => {
+  try {
+    const tables = await Table.find({ isActive: true }).select('tableName').sort({ createdAt: 1 }).lean();
+    res.json(tables);
+  } catch (err) { next(err); }
+});
+
 // POST /api/tables  -> create a new table { tableName }  (Admin only)
 router.post('/', requireAdmin, async (req, res, next) => {
   try {

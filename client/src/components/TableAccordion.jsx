@@ -32,8 +32,18 @@ export default function TableAccordion({ table, menu, reload, admin }) {
   return (
     <section className="bg-coffee-card border border-coffee-line rounded-2xl overflow-hidden shadow-lg shadow-black/20">
       {/* Accordion header */}
-      <div className="flex items-center gap-2 p-3 cursor-pointer select-none" onClick={() => setOpen((o) => !o)}>
-        <span className={`text-coffee-gold text-lg transition-transform ${open ? 'rotate-90' : ''}`}>▸</span>
+      <div className="flex items-center gap-3 p-3 cursor-pointer select-none" onClick={() => setOpen((o) => !o)}>
+        {/* Clear, big, tappable open/close chevron */}
+        <span
+          className={`shrink-0 w-9 h-9 flex items-center justify-center rounded-full border text-lg
+                      transition-transform duration-200 ${
+                        open
+                          ? 'rotate-180 bg-coffee-gold text-coffee-bg border-coffee-gold'
+                          : 'bg-coffee-card2 text-coffee-gold border-coffee-line'
+                      }`}
+        >
+          ⌄
+        </span>
         <div className="flex-1 min-w-0">
           {/* Editable table name for Admin; read-only text for User. */}
           {admin ? (

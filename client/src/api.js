@@ -41,14 +41,17 @@ export const api = {
   addMenuItem: (data) => request('/menu', { method: 'POST', body: data }),
   updateMenuItem: (id, data) => request(`/menu/${id}`, { method: 'PUT', body: data }),
   deleteMenuItem: (id) => request(`/menu/${id}`, { method: 'DELETE' }),
+  adjustMenu: (delta) => request('/menu/adjust', { method: 'POST', body: { delta } }),
 
   // Tables (the GET returns the full nested tree with totals)
   getTables: () => request('/tables'),
+  getTableNames: () => request('/tables/names'),
   addTable: (tableName) => request('/tables', { method: 'POST', body: { tableName } }),
   renameTable: (id, tableName) => request(`/tables/${id}`, { method: 'PUT', body: { tableName } }),
   deleteTable: (id) => request(`/tables/${id}`, { method: 'DELETE' }),
 
   // Customers
+  getCustomer: (id) => request(`/customers/${id}`),
   addCustomer: (tableId, customerName) =>
     request('/customers', { method: 'POST', body: { tableId, customerName } }),
   renameCustomer: (id, customerName) =>

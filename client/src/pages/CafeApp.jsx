@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, fmt } from '../api';
-import { isAdmin, getRole, logout } from '../auth';
+import { isAdmin, logout } from '../auth';
 import TableAccordion from '../components/TableAccordion';
 import AdminPanel from '../components/AdminPanel';
+import UserView from '../components/UserView';
 
 /**
  * Main app (after login). Same data flow as before — the backend tree is the
@@ -33,7 +34,12 @@ export default function CafeApp() {
     catch (e) { setError(e.message); }
   }, []);
 
-  useEffect(() => { reloadTables(); reloadMenu(); }, [reloadTables, reloadMenu]);
+  // Admins load the whole tree; Users never do (UserView fetches only their own
+  // record). Both need the menu for the quick-select list.
+  useEffect(() => {
+    if (admin) reloadTables();
+    reloadMenu();
+  }, [admin, reloadTables, reloadMenu]);
 
   const cafeTotal = tables.reduce((sum, t) => sum + t.grandTotal, 0);
 
@@ -55,18 +61,29 @@ export default function CafeApp() {
       {/* Header */}
       <header className="sticky top-0 z-30 bg-coffee-bg/95 backdrop-blur border-b border-coffee-line">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <span className="text-2xl">☕</span>
-            <div>
+            <div className="min-w-0">
               <h1 className="text-lg font-extrabold leading-none">حساب القهوة</h1>
-              <p className="text-[11px] text-coffee-muted mt-0.5">
-                {admin ? 'مسؤول' : 'مستخدم'} · <button onClick={handleLogout} className="underline">خروج</button>
-              </p>
+              <p className="text-[11px] text-coffee-muted mt-0.5">{admin ? 'مسؤول' : 'مستخدم'}</p>
             </div>
           </div>
-          <div className="text-left">
-            <p className="text-[10px] text-coffee-muted leading-none">إجمالي الكافيه</p>
-            <p className="text-xl font-extrabold text-coffee-gold leading-tight">{fmt(cafeTotal)}</p>
+          <div className="flex items-center gap-3 shrink-0">
+            {/* Café total is for Admins only */}
+            {admin && (
+              <div className="text-left">
+                <p className="text-[10px] text-coffee-muted leading-none">إجمالي الكافيه</p>
+                <p className="text-lg font-extrabold text-coffee-gold leading-tight">{fmt(cafeTotal)}</p>
+              </div>
+            )}
+            {/* Clear, visible logout button */}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1 text-sm font-bold bg-coffee-card border border-coffee-line
+                         text-coffee-cream rounded-xl px-3 py-2 active:scale-95 transition"
+            >
+              <span>خروج</span><span aria-hidden>⎋</span>
+            </button>
           </div>
         </div>
 
@@ -99,7 +116,10 @@ export default function CafeApp() {
           </div>
         )}
 
-        {admin && tab === 'admin' ? (
+        {!admin ? (
+          /* USER: restricted view — pick a table, enter name, manage only own drinks */
+          <UserView menu={menu} />
+        ) : tab === 'admin' ? (
           <AdminPanel menu={menu} reloadMenu={reloadMenu} reloadTables={reloadTables} />
         ) : (
           <>

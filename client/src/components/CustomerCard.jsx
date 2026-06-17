@@ -8,9 +8,12 @@ import QuickMenu from './QuickMenu';
  * `customer` arrives already enriched by the backend with `subtotal`,
  * `finalTotal` and its `orders` array.
  */
-export default function CustomerCard({ customer, menu, reload, admin }) {
+export default function CustomerCard({ customer, menu, reload, admin, owner = false }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const hasOverride = customer.customOverridePrice !== null && customer.customOverridePrice !== undefined;
+  // A User editing their OWN card (owner) can add/adjust/remove their drinks,
+  // but only an Admin can rename people, override prices, or delete a customer.
+  const canEditOrders = admin || owner;
 
   async function renameCustomer(value) {
     const name = value.trim();
@@ -74,8 +77,8 @@ export default function CustomerCard({ customer, menu, reload, admin }) {
             <span className="flex-1 min-w-0 truncate text-sm">{o.itemName}</span>
             <span className="text-xs text-coffee-muted shrink-0">{o.price} ج</span>
 
-            {/* Quantity: Admin gets +/- steppers; User sees a read-only count (×N). */}
-            {admin ? (
+            {/* Quantity: owner/Admin get +/- steppers; otherwise a read-only count (×N). */}
+            {canEditOrders ? (
               <div className="flex items-center gap-1 shrink-0 select-none">
                 <button
                   onClick={() => changeQty(o._id, -1)}
@@ -92,15 +95,16 @@ export default function CustomerCard({ customer, menu, reload, admin }) {
             )}
 
             <span className="w-12 text-left text-xs font-bold text-coffee-gold shrink-0">{fmt(o.price * o.quantity)}</span>
-            {/* Deleting a line item is Admin only. */}
-            {admin && (
+            {/* Owner/Admin can remove a line item. */}
+            {canEditOrders && (
               <button onClick={() => removeOrder(o._id)} className="text-red-300/60 hover:text-red-300 text-sm px-1 shrink-0">🗑</button>
             )}
           </div>
         ))}
       </div>
 
-      {/* Add drink + manual override */}
+      {/* Add drink + manual override (owner/Admin only) */}
+      {canEditOrders && (
       <div className="flex items-center gap-2 mt-2.5">
         <button
           onClick={() => setMenuOpen(true)}
@@ -126,6 +130,7 @@ export default function CustomerCard({ customer, menu, reload, admin }) {
           </div>
         )}
       </div>
+      )}
 
       {/* Final total for this person */}
       <div className="flex items-center justify-between mt-2 pt-2 border-t border-coffee-line/60">
