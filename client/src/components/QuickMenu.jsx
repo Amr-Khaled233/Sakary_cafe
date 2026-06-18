@@ -117,15 +117,6 @@ export default function QuickMenu({ customerId, menu, onClose, reload }) {
             + إضافة الصنف المخصص
           </button>
         </div>
-
-        {/* Done button so it's obvious how to finish */}
-        <button
-          onClick={onClose}
-          className="w-full mt-3 bg-coffee-card2 border border-coffee-line text-coffee-cream font-bold
-                     rounded-xl py-3 active:scale-95 transition"
-        >
-          تم ✓
-        </button>
       </div>
     </div>
   );
