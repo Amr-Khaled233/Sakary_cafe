@@ -47,8 +47,8 @@ export default function CustomerCard({ customer, menu, reload, admin, owner = fa
       {/* Header: name + subtotal */}
       <div className="flex items-center gap-2 mb-2">
         <span className="text-coffee-muted">👤</span>
-        {/* Editable name for Admin; read-only text for User. */}
-        {admin ? (
+        {/* Editable name for Admin or the owner (a User editing their own name). */}
+        {canEditOrders ? (
           <input
             defaultValue={customer.customerName}
             onBlur={(e) => renameCustomer(e.target.value)}

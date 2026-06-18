@@ -41,7 +41,14 @@ export default function UserView({ menu }) {
   const reloadCustomer = useCallback(async () => {
     if (!session) return;
     try {
-      setCustomer(await api.getCustomer(session.customerId));
+      const c = await api.getCustomer(session.customerId);
+      setCustomer(c);
+      // Keep the saved session name in sync if the user renamed themselves.
+      if (c.customerName && c.customerName !== session.customerName) {
+        const s = { ...session, customerName: c.customerName };
+        localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+        setSession(s);
+      }
     } catch (e) {
       // Admin deleted this customer (or the shift was reset) -> drop the session.
       if (String(e.message).includes('غير موجود')) clearSession();

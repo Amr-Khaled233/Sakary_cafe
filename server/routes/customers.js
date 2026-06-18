@@ -44,15 +44,15 @@ router.get('/:id', async (req, res, next) => {
 
 // PUT /api/customers/:id  -> rename the customer and/or set/clear the manual
 // final-price override. Send any of:
-//   { customerName: "..." }            -> rename
-//   { customOverridePrice: number }    -> override final price
-//   { customOverridePrice: null | "" } -> clear the override
-// (Admin only — Users cannot rename others or override prices.)
-router.put('/:id', requireAdmin, async (req, res, next) => {
+//   { customerName: "..." }            -> rename  (any logged-in role; a User edits their own)
+//   { customOverridePrice: number }    -> override final price  (Admin only)
+//   { customOverridePrice: null | "" } -> clear the override     (Admin only)
+router.put('/:id', async (req, res, next) => {
   try {
     const update = {};
-    if (req.body.customerName !== undefined) update.customerName = req.body.customerName;
+    if (req.body.customerName !== undefined) update.customerName = String(req.body.customerName).trim();
     if (req.body.customOverridePrice !== undefined) {
+      if (req.user.role !== 'Admin') return res.status(403).json({ message: 'تعديل السعر للمسؤول فقط' });
       update.customOverridePrice = req.body.customOverridePrice === '' ? null : req.body.customOverridePrice;
     }
     const customer = await Customer.findByIdAndUpdate(req.params.id, update, { new: true });
