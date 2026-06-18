@@ -4,10 +4,11 @@ const { requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
-// GET /api/menu  -> all menu items (default first, then custom). Any logged-in role.
+// GET /api/menu  -> all menu items, sorted by Arabic alphabetical name so any
+// new item lands in its correct place automatically. Any logged-in role.
 router.get('/', async (req, res, next) => {
   try {
-    const items = await Menu.find().sort({ isDefault: -1, createdAt: 1 });
+    const items = await Menu.find().collation({ locale: 'ar' }).sort({ name: 1 });
     res.json(items);
   } catch (err) { next(err); }
 });
@@ -21,7 +22,7 @@ router.post('/adjust', requireAdmin, async (req, res, next) => {
     if (!delta || isNaN(delta)) return res.status(400).json({ message: 'delta مطلوب' });
     // Aggregation-pipeline update: price = max(0, price + delta)
     await Menu.updateMany({}, [{ $set: { price: { $max: [0, { $add: ['$price', delta] }] } } }]);
-    const items = await Menu.find().sort({ isDefault: -1, createdAt: 1 });
+    const items = await Menu.find().collation({ locale: 'ar' }).sort({ name: 1 });
     res.json(items);
   } catch (err) { next(err); }
 });

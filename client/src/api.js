@@ -74,3 +74,7 @@ export const api = {
 };
 
 export const fmt = (n) => `${Math.round((n || 0) * 100) / 100} ج`;
+
+// Sort a menu array by Arabic alphabetical name (a stable copy — doesn't mutate).
+export const sortMenu = (arr) =>
+  [...(arr || [])].sort((a, b) => String(a.name).localeCompare(String(b.name), 'ar'));

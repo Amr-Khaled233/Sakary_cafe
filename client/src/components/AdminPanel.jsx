@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { api } from '../api';
+import { api, sortMenu } from '../api';
 
 /**
  * Admin control panel (لوحة التحكم) — menu only.
@@ -58,7 +58,7 @@ export default function AdminPanel({ menu, reloadMenu, reloadTables }) {
         </div>
 
         <div className="space-y-2">
-          {menu.map((m) => (
+          {sortMenu(menu).map((m) => (
             // Key includes price/name so an external change (e.g. bulk +5/-5) remounts
             // the row with fresh values; local typing doesn't change the key.
             <MenuRow key={`${m._id}-${m.price}-${m.name}`} item={m} onSave={saveItem} onDelete={deleteItem} />

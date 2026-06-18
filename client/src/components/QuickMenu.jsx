@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { api } from '../api';
+import { api, sortMenu } from '../api';
 
 /**
  * Bottom-sheet for adding drinks to ONE customer.
@@ -59,7 +59,7 @@ export default function QuickMenu({ customerId, menu, onClose, reload }) {
 
         {/* Quick-select grid: fat-finger-friendly buttons */}
         <div className="grid grid-cols-2 gap-2 mb-4">
-          {menu.map((m) => {
+          {sortMenu(menu).map((m) => {
             const key = keyOf(m.name, m.price);
             const n = counts[key] || 0;
             const isFlash = flash && flash.key === key;
