@@ -1,19 +1,32 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { api } from '../api';
 
 /**
  * Bottom-sheet for adding drinks to ONE customer.
  * - A grid of large quick-select buttons built from the global `menu`.
  * - An inline custom-item form (name + price) for off-menu drinks.
- * After each add we call `reload()` so totals refresh; the sheet stays open so
- * the user can tap several drinks quickly for the same person.
+ *
+ * Feedback: after each add we show a green "✓ تمت إضافة …" banner, flash the
+ * tapped button green, and keep a per-drink count badge (✓ N) so the user can
+ * clearly see what — and how many — they've added. The sheet stays open so they
+ * can tap several quickly.
  */
 export default function QuickMenu({ customerId, menu, onClose, reload }) {
   const [customName, setCustomName] = useState('');
   const [customPrice, setCustomPrice] = useState('');
+  const [counts, setCounts] = useState({});   // key -> how many added this session
+  const [flash, setFlash] = useState(null);   // { key, name } just added
+  const timer = useRef();
+
+  const keyOf = (name, price) => `${name}__${price}`;
 
   async function add(itemName, price) {
     await api.addOrder({ customerId, itemName, price, quantity: 1 });
+    const key = keyOf(itemName, price);
+    setCounts((c) => ({ ...c, [key]: (c[key] || 0) + 1 }));
+    setFlash({ key, name: itemName });
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setFlash(null), 1200);
     await reload();
   }
 
@@ -36,19 +49,43 @@ export default function QuickMenu({ customerId, menu, onClose, reload }) {
           <button onClick={onClose} className="text-coffee-muted text-2xl leading-none px-2">✕</button>
         </div>
 
+        {/* "Added" confirmation banner */}
+        {flash && (
+          <div className="mb-3 bg-emerald-500/15 border border-emerald-500/40 text-emerald-300
+                          text-sm font-extrabold rounded-xl px-3 py-2 text-center">
+            ✓ تمت إضافة {flash.name}
+          </div>
+        )}
+
         {/* Quick-select grid: fat-finger-friendly buttons */}
         <div className="grid grid-cols-2 gap-2 mb-4">
-          {menu.map((m) => (
-            <button
-              key={m._id}
-              onClick={() => add(m.name, m.price)}
-              className="text-right bg-coffee-card2 hover:bg-coffee-line active:scale-95 transition
-                         border border-coffee-line rounded-xl p-3"
-            >
-              <span className="block font-bold text-sm leading-tight">{m.name}</span>
-              <span className="block text-coffee-gold font-extrabold text-sm mt-1">{m.price} ج</span>
-            </button>
-          ))}
+          {menu.map((m) => {
+            const key = keyOf(m.name, m.price);
+            const n = counts[key] || 0;
+            const isFlash = flash && flash.key === key;
+            return (
+              <button
+                key={m._id}
+                onClick={() => add(m.name, m.price)}
+                className={`relative text-right rounded-xl p-3 border active:scale-95 transition ${
+                  isFlash
+                    ? 'border-emerald-400 bg-emerald-500/20'
+                    : 'bg-coffee-card2 border-coffee-line hover:bg-coffee-line'
+                }`}
+              >
+                <span className="block font-bold text-sm leading-tight">{m.name}</span>
+                <span className="block text-coffee-gold font-extrabold text-sm mt-1">{m.price} ج</span>
+
+                {/* Count badge: shows how many of this drink were just added */}
+                {n > 0 && (
+                  <span className="absolute top-2 left-2 flex items-center gap-0.5 bg-emerald-500 text-white
+                                   text-[11px] font-extrabold rounded-full px-1.5 py-0.5 shadow">
+                    ✓ {n}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Custom item */}
@@ -80,6 +117,15 @@ export default function QuickMenu({ customerId, menu, onClose, reload }) {
             + إضافة الصنف المخصص
           </button>
         </div>
+
+        {/* Done button so it's obvious how to finish */}
+        <button
+          onClick={onClose}
+          className="w-full mt-3 bg-coffee-card2 border border-coffee-line text-coffee-cream font-bold
+                     rounded-xl py-3 active:scale-95 transition"
+        >
+          تم ✓
+        </button>
       </div>
     </div>
   );
