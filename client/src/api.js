@@ -48,6 +48,7 @@ export const api = {
   getTableNames: () => request('/tables/names'),
   addTable: (tableName) => request('/tables', { method: 'POST', body: { tableName } }),
   renameTable: (id, tableName) => request(`/tables/${id}`, { method: 'PUT', body: { tableName } }),
+  resetTable: (id) => request(`/tables/${id}/reset`, { method: 'POST' }),
   deleteTable: (id) => request(`/tables/${id}`, { method: 'DELETE' }),
 
   // Customers

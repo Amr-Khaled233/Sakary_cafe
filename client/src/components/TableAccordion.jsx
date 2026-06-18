@@ -29,6 +29,14 @@ export default function TableAccordion({ table, menu, reload, admin }) {
     await reload();
   }
 
+  // Empty the table (remove its customers + orders) but keep the table itself.
+  async function resetTable() {
+    if (table.customers.length === 0) return;
+    if (!confirm(`تصفير "${table.tableName}"؟ كل الزبائن والطلبات هتتمسح والطاولة هتفضل فاضية.`)) return;
+    await api.resetTable(table._id);
+    await reload();
+  }
+
   return (
     <section className="bg-coffee-card border border-coffee-line rounded-2xl overflow-hidden shadow-lg shadow-black/20">
       {/* Accordion header */}
@@ -89,7 +97,16 @@ export default function TableAccordion({ table, menu, reload, admin }) {
             >
               + إضافة زبون
             </button>
-            {/* Deleting a table is Admin only. */}
+            {/* Reset (empty) and delete are Admin only. */}
+            {admin && (
+              <button
+                onClick={resetTable}
+                className="px-4 bg-coffee-card2 hover:bg-coffee-line border border-coffee-line
+                           text-coffee-cream rounded-xl py-3 active:scale-95 transition"
+              >
+                ♻️ تصفير
+              </button>
+            )}
             {admin && (
               <button
                 onClick={deleteTable}

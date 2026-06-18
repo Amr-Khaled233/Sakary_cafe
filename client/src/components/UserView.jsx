@@ -44,7 +44,7 @@ export default function UserView({ menu }) {
       setCustomer(await api.getCustomer(session.customerId));
     } catch (e) {
       // Admin deleted this customer (or the shift was reset) -> drop the session.
-      if (String(e.message).includes('غير موجود')) endSession();
+      if (String(e.message).includes('غير موجود')) clearSession();
       else setError(e.message);
     }
   }, [session]);
@@ -66,11 +66,29 @@ export default function UserView({ menu }) {
     finally { setBusy(false); }
   }
 
-  function endSession() {
+  // Clear local session only (used when the customer is already gone server-side).
+  function clearSession() {
     localStorage.removeItem(SESSION_KEY);
     setSession(null);
     setCustomer(null);
     setName(''); setTableId('');
+  }
+
+  // Leave the table: delete this user's own customer (so it disappears from the
+  // admin view too), then go back to the setup screen. Confirms if they have orders.
+  async function leaveTable() {
+    const hasOrders = customer && customer.orders && customer.orders.length > 0;
+    const msg = hasOrders
+      ? 'هتخرج من الطاولة وكل طلباتك هتتمسح. متأكد؟'
+      : 'خروج من الطاولة؟';
+    if (!confirm(msg)) return;
+    try {
+      if (session) await api.deleteCustomer(session.customerId);
+    } catch (e) {
+      // If it was already removed, that's fine — we still clear locally.
+      if (!String(e.message).includes('غير موجود')) { setError(e.message); return; }
+    }
+    clearSession();
   }
 
   /* ----------------------------- Setup screen ----------------------------- */
@@ -148,10 +166,10 @@ export default function UserView({ menu }) {
           <p className="font-extrabold text-coffee-gold">{session.tableName || '—'}</p>
         </div>
         <button
-          onClick={endSession}
-          className="text-xs bg-coffee-card border border-coffee-line text-coffee-muted rounded-lg px-3 py-2 active:scale-95"
+          onClick={leaveTable}
+          className="text-xs bg-red-500/15 border border-red-500/40 text-red-200 rounded-lg px-3 py-2 active:scale-95"
         >
-          تغيير الطاولة / الاسم
+          🚪 خروج من الطاولة
         </button>
       </div>
 

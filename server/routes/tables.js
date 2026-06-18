@@ -47,6 +47,22 @@ router.put('/:id', requireAdmin, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /api/tables/:id/reset  -> empty a table: delete all its customers + their
+// orders, but KEEP the table itself (so it's ready for a fresh round).  (Admin only)
+router.post('/:id/reset', requireAdmin, async (req, res, next) => {
+  try {
+    const table = await Table.findById(req.params.id);
+    if (!table) return res.status(404).json({ message: 'الطاولة غير موجودة' });
+
+    const customers = await Customer.find({ tableId: table._id }).select('_id');
+    const customerIds = customers.map((c) => c._id);
+    await Order.deleteMany({ customerId: { $in: customerIds } });
+    await Customer.deleteMany({ tableId: table._id });
+
+    res.json({ message: 'تم تصفير الطاولة', id: req.params.id });
+  } catch (err) { next(err); }
+});
+
 // DELETE /api/tables/:id  -> delete a table + cascade its customers/orders.  (Admin only)
 router.delete('/:id', requireAdmin, async (req, res, next) => {
   try {
