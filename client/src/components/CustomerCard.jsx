@@ -48,7 +48,13 @@ export default function CustomerCard({ customer, menu, reload, admin, owner = fa
   }
 
   return (
-    <div className={`bg-coffee-card2 border rounded-xl p-3 ${isPaid ? 'border-emerald-500/50' : 'border-coffee-line'}`}>
+    <div
+      className={`border rounded-xl p-3 transition-colors ${
+        isPaid
+          ? 'bg-emerald-500/15 border-emerald-500/60'   // paid -> green card
+          : 'bg-amber-500/10 border-amber-500/40'        // not paid -> amber card
+      }`}
+    >
       {/* Header: name + paid badge + subtotal */}
       <div className="flex items-center gap-2 mb-2">
         <span className="text-coffee-muted">👤</span>
