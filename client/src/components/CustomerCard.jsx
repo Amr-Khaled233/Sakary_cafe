@@ -14,7 +14,12 @@ export default function CustomerCard({ customer, menu, reload, admin, owner = fa
   // A User editing their OWN card (owner) can add/adjust/remove their drinks,
   // but only an Admin can rename people, override prices, or delete a customer.
   const canEditOrders = admin || owner;
+  const isPaid = !!customer.isPaid;
 
+  async function togglePaid() {
+    await api.togglePaid(customer._id, !isPaid); // Admin only (backend enforces)
+    await reload();
+  }
   async function renameCustomer(value) {
     const name = value.trim();
     if (!name || name === customer.customerName) return; // nothing changed
@@ -43,8 +48,8 @@ export default function CustomerCard({ customer, menu, reload, admin, owner = fa
   }
 
   return (
-    <div className="bg-coffee-card2 border border-coffee-line rounded-xl p-3">
-      {/* Header: name + subtotal */}
+    <div className={`bg-coffee-card2 border rounded-xl p-3 ${isPaid ? 'border-emerald-500/50' : 'border-coffee-line'}`}>
+      {/* Header: name + paid badge + subtotal */}
       <div className="flex items-center gap-2 mb-2">
         <span className="text-coffee-muted">👤</span>
         {/* Editable name for Admin or the owner (a User editing their own name). */}
@@ -57,6 +62,16 @@ export default function CustomerCard({ customer, menu, reload, admin, owner = fa
         ) : (
           <span className="flex-1 min-w-0 font-bold truncate">{customer.customerName}</span>
         )}
+        {/* Paid status badge — visible to everyone (admin + the user themselves) */}
+        <span
+          className={`shrink-0 text-[10px] font-bold rounded-full px-2 py-0.5 border ${
+            isPaid
+              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+              : 'bg-amber-500/15 text-amber-300 border-amber-500/40'
+          }`}
+        >
+          {isPaid ? 'مدفوع ✓' : 'لسه'}
+        </span>
         <div className="text-left shrink-0">
           <p className="text-[10px] text-coffee-muted leading-none">المطلوب</p>
           <p className={`font-extrabold ${hasOverride ? 'text-coffee-muted line-through text-xs' : 'text-coffee-cream'}`}>
@@ -139,6 +154,25 @@ export default function CustomerCard({ customer, menu, reload, admin, owner = fa
           {hasOverride && admin && <button onClick={clearOverride} className="underline mr-1">إلغاء</button>}
         </span>
         <span className="font-extrabold text-coffee-gold text-lg">{fmt(customer.finalTotal)}</span>
+      </div>
+
+      {/* Paid status + Admin toggle (User sees status only) */}
+      <div className="flex items-center justify-between mt-2">
+        <span className={`text-xs font-bold ${isPaid ? 'text-emerald-300' : 'text-amber-300'}`}>
+          {isPaid ? '✓ تم الدفع' : '⏳ لم يتم الدفع بعد'}
+        </span>
+        {admin && (
+          <button
+            onClick={togglePaid}
+            className={`text-xs font-bold rounded-lg px-3 py-1.5 border active:scale-95 transition ${
+              isPaid
+                ? 'bg-coffee-card border-coffee-line text-coffee-muted'
+                : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+            }`}
+          >
+            {isPaid ? 'إلغاء الدفع' : 'تحديد كمدفوع'}
+          </button>
+        )}
       </div>
 
       {menuOpen && (

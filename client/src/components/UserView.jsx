@@ -58,6 +58,13 @@ export default function UserView({ menu }) {
 
   useEffect(() => { reloadCustomer(); }, [reloadCustomer]);
 
+  // Light auto-refresh so the user sees admin changes (e.g. marked as paid) soon.
+  useEffect(() => {
+    if (!session) return;
+    const id = setInterval(reloadCustomer, 20000);
+    return () => clearInterval(id);
+  }, [session, reloadCustomer]);
+
   async function startSession(e) {
     e.preventDefault();
     if (!tableId) return setError('اختر الطاولة');
