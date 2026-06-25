@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api, fmt } from '../api';
 import { isAdmin, logout } from '../auth';
 import TableAccordion from '../components/TableAccordion';
+import CustomerCard from '../components/CustomerCard';
 import AdminPanel from '../components/AdminPanel';
 import UserView from '../components/UserView';
 import TablesSummary from '../components/TablesSummary';
@@ -24,7 +25,17 @@ export default function CafeApp() {
   const [tables, setTables] = useState([]);
   const [menu, setMenu] = useState([]);
   const [newTableName, setNewTableName] = useState('');
+  const [search, setSearch] = useState('');
   const [error, setError] = useState('');
+
+  // Admin name-search: flatten matching customers across all tables.
+  const q = search.trim();
+  const matches = q
+    ? tables.flatMap((t) =>
+        t.customers
+          .filter((c) => c.customerName && c.customerName.includes(q))
+          .map((c) => ({ table: t, customer: c })))
+    : [];
 
   const reloadTables = useCallback(async () => {
     try { setTables(await api.getTables()); }
@@ -124,43 +135,76 @@ export default function CafeApp() {
           <AdminPanel menu={menu} reloadMenu={reloadMenu} reloadTables={reloadTables} />
         ) : (
           <>
-            {/* Add table — Admin only */}
-            {admin && (
-              <form onSubmit={handleAddTable} className="flex gap-2 mb-4">
-                <input
-                  value={newTableName}
-                  onChange={(e) => setNewTableName(e.target.value)}
-                  placeholder="اسم الطاولة (مثال: طاولة العيلة)"
-                  className="flex-1 bg-coffee-card border border-coffee-line rounded-xl px-4 py-3 text-base
-                             placeholder:text-coffee-muted/60 focus:outline-none focus:border-coffee-gold"
-                />
+            {/* Search a customer by name */}
+            <div className="relative mb-4">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="🔍 ابحث باسم الزبون..."
+                className="w-full bg-coffee-card border border-coffee-line rounded-xl px-4 py-3 text-base
+                           placeholder:text-coffee-muted/60 focus:outline-none focus:border-coffee-gold"
+              />
+              {q && (
                 <button
-                  type="submit"
-                  className="shrink-0 bg-coffee-gold hover:bg-coffee-gold2 active:scale-95 transition
-                             text-coffee-bg font-extrabold rounded-xl px-5 py-3 text-base"
+                  onClick={() => setSearch('')}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-coffee-muted text-lg"
                 >
-                  + طاولة
+                  ✕
                 </button>
-              </form>
-            )}
-
-            <div className="space-y-3">
-              {tables.map((table) => (
-                <TableAccordion key={table._id} table={table} menu={menu} reload={reloadTables} admin={admin} />
-              ))}
+              )}
             </div>
 
-            {tables.length === 0 && (
-              <div className="text-center py-20">
-                <div className="text-6xl mb-3">🪑</div>
-                <p className="text-coffee-muted">
-                  {admin ? 'لا توجد طاولات نشطة. أضف أول طاولة للبدء.' : 'لا توجد طاولات حالياً.'}
-                </p>
+            {q ? (
+              /* ---- Search results: matching customers across all tables ---- */
+              <div className="space-y-3">
+                {matches.length === 0 ? (
+                  <p className="text-center text-coffee-muted py-10">لا يوجد زبون بالاسم "{q}".</p>
+                ) : (
+                  matches.map(({ table, customer }) => (
+                    <div key={customer._id}>
+                      <p className="text-[11px] text-coffee-muted mb-1">طاولة: {table.tableName}</p>
+                      <CustomerCard customer={customer} menu={menu} reload={reloadTables} admin />
+                    </div>
+                  ))
+                )}
               </div>
-            )}
+            ) : (
+              <>
+                {/* Add table */}
+                <form onSubmit={handleAddTable} className="flex gap-2 mb-4">
+                  <input
+                    value={newTableName}
+                    onChange={(e) => setNewTableName(e.target.value)}
+                    placeholder="اسم الطاولة (مثال: طاولة العيلة)"
+                    className="flex-1 bg-coffee-card border border-coffee-line rounded-xl px-4 py-3 text-base
+                               placeholder:text-coffee-muted/60 focus:outline-none focus:border-coffee-gold"
+                  />
+                  <button
+                    type="submit"
+                    className="shrink-0 bg-coffee-gold hover:bg-coffee-gold2 active:scale-95 transition
+                               text-coffee-bg font-extrabold rounded-xl px-5 py-3 text-base"
+                  >
+                    + طاولة
+                  </button>
+                </form>
 
-            {/* Per-table drink breakdown at the very bottom (Admin) */}
-            <TablesSummary tables={tables} />
+                <div className="space-y-3">
+                  {tables.map((table) => (
+                    <TableAccordion key={table._id} table={table} menu={menu} reload={reloadTables} admin={admin} />
+                  ))}
+                </div>
+
+                {tables.length === 0 && (
+                  <div className="text-center py-20">
+                    <div className="text-6xl mb-3">🪑</div>
+                    <p className="text-coffee-muted">لا توجد طاولات نشطة. أضف أول طاولة للبدء.</p>
+                  </div>
+                )}
+
+                {/* Per-table drink breakdown at the very bottom */}
+                <TablesSummary tables={tables} />
+              </>
+            )}
           </>
         )}
       </main>

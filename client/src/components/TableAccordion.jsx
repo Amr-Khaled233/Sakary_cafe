@@ -10,6 +10,12 @@ import CustomerCard from './CustomerCard';
 export default function TableAccordion({ table, menu, reload, admin }) {
   const [open, setOpen] = useState(true);
 
+  // Payment breakdown for this table.
+  const total = table.grandTotal;
+  const paid = table.customers.reduce((s, c) => s + (c.isPaid ? c.finalTotal : 0), 0);
+  const remaining = total - paid;
+  const allPaid = table.customers.length > 0 && remaining <= 0;
+
   async function addCustomer() {
     const name = `زبون ${table.customers.length + 1}`;
     await api.addCustomer(table._id, name);
@@ -71,13 +77,36 @@ export default function TableAccordion({ table, menu, reload, admin }) {
         </div>
         <div className="text-left shrink-0">
           <p className="text-[10px] text-coffee-muted leading-none">الإجمالي</p>
-          <p className="font-extrabold text-coffee-gold">{fmt(table.grandTotal)}</p>
+          <p className="font-extrabold text-coffee-gold">{fmt(total)}</p>
+          {table.customers.length > 0 && (
+            <p className={`text-[9px] leading-none mt-0.5 ${allPaid ? 'text-emerald-300' : 'text-amber-300'}`}>
+              {allPaid ? 'مدفوعة بالكامل ✓' : `باقي ${fmt(remaining)}`}
+            </p>
+          )}
         </div>
       </div>
 
       {/* Accordion body */}
       {open && (
         <div className="px-3 pb-3 border-t border-coffee-line">
+          {/* Payment summary: total / paid / remaining */}
+          {table.customers.length > 0 && (
+            <div className="grid grid-cols-3 gap-2 mt-3 text-center">
+              <div className="bg-coffee-card2 border border-coffee-line rounded-lg py-2">
+                <p className="text-[10px] text-coffee-muted">الإجمالي</p>
+                <p className="font-extrabold text-coffee-gold text-sm">{fmt(total)}</p>
+              </div>
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg py-2">
+                <p className="text-[10px] text-emerald-300/80">مدفوع</p>
+                <p className="font-extrabold text-emerald-300 text-sm">{fmt(paid)}</p>
+              </div>
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg py-2">
+                <p className="text-[10px] text-amber-300/80">باقي</p>
+                <p className="font-extrabold text-amber-300 text-sm">{fmt(remaining)}</p>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-3 mt-3">
             {table.customers.length === 0 ? (
               <p className="text-center text-sm text-coffee-muted py-4">لا يوجد زبائن. أضف أول زبون.</p>
