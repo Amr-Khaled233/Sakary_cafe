@@ -150,6 +150,7 @@ export default function UserView({ menu }) {
           <div>
             <p className="text-sm font-bold mb-2">اسمك</p>
             <input
+              name="user-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="اكتب اسمك"

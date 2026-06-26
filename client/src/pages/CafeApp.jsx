@@ -138,6 +138,7 @@ export default function CafeApp() {
             {/* Search a customer by name */}
             <div className="relative mb-4">
               <input
+                name="customer-search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="🔍 ابحث باسم الزبون..."
@@ -173,6 +174,7 @@ export default function CafeApp() {
                 {/* Add table */}
                 <form onSubmit={handleAddTable} className="flex gap-2 mb-4">
                   <input
+                    name="new-table-name"
                     value={newTableName}
                     onChange={(e) => setNewTableName(e.target.value)}
                     placeholder="اسم الطاولة (مثال: طاولة العيلة)"

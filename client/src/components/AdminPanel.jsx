@@ -68,6 +68,7 @@ export default function AdminPanel({ menu, reloadMenu, reloadTables }) {
         {/* Add new menu item */}
         <div className="flex gap-2 mt-3">
           <input
+            name="new-menu-name"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="مشروب جديد"
@@ -75,6 +76,7 @@ export default function AdminPanel({ menu, reloadMenu, reloadTables }) {
                        placeholder:text-coffee-muted/60 focus:outline-none focus:border-coffee-gold"
           />
           <input
+            name="new-menu-price"
             value={newPrice}
             onChange={(e) => setNewPrice(e.target.value)}
             type="number"
@@ -104,11 +106,13 @@ function MenuRow({ item, onSave, onDelete }) {
   return (
     <div className="flex items-center gap-2 bg-coffee-card border border-coffee-line rounded-xl px-2 py-2">
       <input
+        name="menu-item-name"
         value={name}
         onChange={(e) => setName(e.target.value)}
         className="flex-1 min-w-0 bg-transparent text-sm focus:outline-none"
       />
       <input
+        name="menu-item-price"
         value={price}
         onChange={(e) => setPrice(e.target.value)}
         type="number"

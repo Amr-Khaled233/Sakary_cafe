@@ -93,6 +93,7 @@ export default function QuickMenu({ customerId, menu, onClose, reload }) {
           <p className="text-sm font-bold mb-2 text-coffee-gold">صنف مخصص (غير موجود بالقائمة)</p>
           <div className="flex gap-2">
             <input
+              name="custom-item-name"
               value={customName}
               onChange={(e) => setCustomName(e.target.value)}
               placeholder="اسم الصنف"
@@ -100,6 +101,7 @@ export default function QuickMenu({ customerId, menu, onClose, reload }) {
                          placeholder:text-coffee-muted/60 focus:outline-none focus:border-coffee-gold"
             />
             <input
+              name="custom-item-price"
               value={customPrice}
               onChange={(e) => setCustomPrice(e.target.value)}
               type="number"

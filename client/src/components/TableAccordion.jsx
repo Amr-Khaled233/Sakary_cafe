@@ -62,6 +62,7 @@ export default function TableAccordion({ table, menu, reload, admin }) {
           {/* Editable table name for Admin; read-only text for User. */}
           {admin ? (
             <input
+              name="table-name"
               defaultValue={table.tableName}
               onClick={(e) => e.stopPropagation()}
               onBlur={(e) => renameTable(e.target.value)}

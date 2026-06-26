@@ -86,6 +86,8 @@ export default function Landing() {
             <p className="font-extrabold text-coffee-gold">دخول المسؤول</p>
             <input
               type="password"
+              name="admin-password"
+              autoComplete="current-password"
               autoFocus
               value={password}
               onChange={(e) => setPassword(e.target.value)}

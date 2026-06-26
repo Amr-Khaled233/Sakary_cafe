@@ -61,6 +61,7 @@ export default function CustomerCard({ customer, menu, reload, admin, owner = fa
         {/* Editable name for Admin or the owner (a User editing their own name). */}
         {canEditOrders ? (
           <input
+            name="customer-name"
             defaultValue={customer.customerName}
             onBlur={(e) => renameCustomer(e.target.value)}
             className="flex-1 min-w-0 bg-transparent font-bold focus:outline-none focus:bg-coffee-card rounded px-1 -mx-1"
@@ -139,6 +140,7 @@ export default function CustomerCard({ customer, menu, reload, admin, owner = fa
           <div className="flex items-center gap-1 shrink-0">
             <span className="text-[10px] text-coffee-muted">سعر يدوي</span>
             <input
+              name="override-price"
               type="number"
               inputMode="numeric"
               placeholder="—"
