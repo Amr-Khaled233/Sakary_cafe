@@ -76,7 +76,7 @@ export default function CafeApp() {
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-2xl">☕</span>
             <div className="min-w-0">
-              <h1 className="text-lg font-extrabold leading-none">حساب القهوة</h1>
+              <h1 className="text-lg font-extrabold leading-none">ابو سليم</h1>
               <p className="text-[11px] text-coffee-muted mt-0.5">{admin ? 'مسؤول' : 'مستخدم'}</p>
             </div>
           </div>

@@ -54,7 +54,7 @@ export default function Landing() {
       {/* Brand */}
       <div className="text-center mb-8">
         <div className="text-6xl mb-2">☕</div>
-        <h1 className="text-2xl font-extrabold">حساب القهوة</h1>
+        <h1 className="text-2xl font-extrabold">ابو سليم</h1>
         <p className="text-coffee-muted text-sm mt-1">اختر طريقة الدخول</p>
       </div>
 
