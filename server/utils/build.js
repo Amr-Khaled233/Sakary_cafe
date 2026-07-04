@@ -28,7 +28,9 @@ async function buildActiveTablesTree() {
   const tables = await Table.find({ isActive: true }).sort({ createdAt: 1 }).lean();
   const tableIds = tables.map((t) => t._id);
 
-  const customers = await Customer.find({ tableId: { $in: tableIds } }).lean();
+  // Newest customers first (sort by _id desc) so a freshly-added customer shows
+  // at the top of their table.
+  const customers = await Customer.find({ tableId: { $in: tableIds } }).sort({ _id: -1 }).lean();
   const customerIds = customers.map((c) => c._id);
 
   const orders = await Order.find({ customerId: { $in: customerIds } }).lean();
