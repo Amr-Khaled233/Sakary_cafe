@@ -59,6 +59,7 @@ export const api = {
     request(`/customers/${id}`, { method: 'PUT', body: { customerName } }),
   overridePrice: (id, customOverridePrice) =>
     request(`/customers/${id}`, { method: 'PUT', body: { customOverridePrice } }),
+  setNote: (id, note) => request(`/customers/${id}`, { method: 'PUT', body: { note } }),
   togglePaid: (id, isPaid) =>
     request(`/customers/${id}/paid`, { method: 'PATCH', body: { isPaid } }),
   deleteCustomer: (id) => request(`/customers/${id}`, { method: 'DELETE' }),
@@ -66,6 +67,7 @@ export const api = {
   // Orders
   addOrder: (data) => request('/orders', { method: 'POST', body: data }),
   changeQty: (id, delta) => request(`/orders/${id}`, { method: 'PUT', body: { delta } }),
+  toggleOrderPaid: (id, isPaid) => request(`/orders/${id}/paid`, { method: 'PATCH', body: { isPaid } }),
   deleteOrder: (id) => request(`/orders/${id}`, { method: 'DELETE' }),
 
   // Admin

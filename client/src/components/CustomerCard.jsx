@@ -15,9 +15,22 @@ export default function CustomerCard({ customer, menu, reload, admin, owner = fa
   // but only an Admin can rename people, override prices, or delete a customer.
   const canEditOrders = admin || owner;
   const isPaid = !!customer.isPaid;
+  const paidAmount = customer.paidAmount || 0;
+  const remaining = Math.max(0, customer.finalTotal - paidAmount);
+  const partiallyPaid = !isPaid && paidAmount > 0;
 
   async function togglePaid() {
     await api.togglePaid(customer._id, !isPaid); // Admin only (backend enforces)
+    await reload();
+  }
+  async function toggleOrderPaid(o) {
+    await api.toggleOrderPaid(o._id, !o.isPaid); // Admin only
+    await reload();
+  }
+  async function setNote(value) {
+    const note = value.trim();
+    if (note === (customer.note || '')) return;
+    await api.setNote(customer._id, note); // Admin only
     await reload();
   }
   async function renameCustomer(value) {
@@ -94,22 +107,36 @@ export default function CustomerCard({ customer, menu, reload, admin, owner = fa
       {/* Order list */}
       <div className="space-y-1.5">
         {customer.orders.length === 0 && <p className="text-xs text-coffee-muted py-1">لا توجد طلبات بعد.</p>}
-        {customer.orders.map((o) => (
-          <div key={o._id} className="flex items-center gap-2 bg-coffee-card rounded-lg px-2 py-1.5">
-            <span className="flex-1 min-w-0 truncate text-sm">{o.itemName}</span>
-            <span className="text-xs text-coffee-muted shrink-0">{o.price} ج</span>
+        {customer.orders.map((o) => {
+          const oPaid = !!o.isPaid;
+          return (
+          <div key={o._id} className={`flex items-center gap-1.5 rounded-lg px-2 py-1.5 ${oPaid ? 'bg-emerald-500/20' : 'bg-coffee-card'}`}>
+            {/* Per-item paid: Admin toggles; others see a read-only check when paid. */}
+            {admin ? (
+              <button
+                onClick={() => toggleOrderPaid(o)}
+                title={oPaid ? 'مدفوع' : 'تحديد كمدفوع'}
+                className={`shrink-0 w-6 h-6 rounded-full border text-[11px] flex items-center justify-center ${
+                  oPaid ? 'bg-emerald-500 text-white border-emerald-500' : 'border-coffee-line text-coffee-muted'
+                }`}
+              >✓</button>
+            ) : oPaid ? (
+              <span className="shrink-0 text-emerald-400 text-sm">✓</span>
+            ) : null}
+
+            <span className={`flex-1 min-w-0 truncate text-sm ${oPaid ? 'text-emerald-200' : ''}`}>{o.itemName}</span>
 
             {/* Quantity: owner/Admin get +/- steppers; otherwise a read-only count (×N). */}
             {canEditOrders ? (
               <div className="flex items-center gap-1 shrink-0 select-none">
                 <button
                   onClick={() => changeQty(o._id, -1)}
-                  className="w-8 h-8 rounded-lg bg-coffee-card2 border border-coffee-line text-lg font-bold active:scale-90 transition leading-none"
+                  className="w-7 h-7 rounded-lg bg-coffee-card2 border border-coffee-line text-lg font-bold active:scale-90 transition leading-none"
                 >−</button>
-                <span className="w-6 text-center font-extrabold">{o.quantity}</span>
+                <span className="w-5 text-center font-extrabold">{o.quantity}</span>
                 <button
                   onClick={() => changeQty(o._id, 1)}
-                  className="w-8 h-8 rounded-lg bg-coffee-gold text-coffee-bg text-lg font-bold active:scale-90 transition leading-none"
+                  className="w-7 h-7 rounded-lg bg-coffee-gold text-coffee-bg text-lg font-bold active:scale-90 transition leading-none"
                 >+</button>
               </div>
             ) : (
@@ -119,10 +146,11 @@ export default function CustomerCard({ customer, menu, reload, admin, owner = fa
             <span className="w-12 text-left text-xs font-bold text-coffee-gold shrink-0">{fmt(o.price * o.quantity)}</span>
             {/* Owner/Admin can remove a line item. */}
             {canEditOrders && (
-              <button onClick={() => removeOrder(o._id)} className="text-red-300/60 hover:text-red-300 text-sm px-1 shrink-0">🗑</button>
+              <button onClick={() => removeOrder(o._id)} className="text-red-300/60 hover:text-red-300 text-sm shrink-0">🗑</button>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Add drink + manual override (owner/Admin only) */}
@@ -166,8 +194,12 @@ export default function CustomerCard({ customer, menu, reload, admin, owner = fa
 
       {/* Paid status + Admin toggle (User sees status only) */}
       <div className="flex items-center justify-between mt-2">
-        <span className={`text-xs font-bold ${isPaid ? 'text-emerald-300' : 'text-amber-300'}`}>
-          {isPaid ? '✓ تم الدفع' : '⏳ لم يتم الدفع بعد'}
+        <span className={`text-xs font-bold ${isPaid ? 'text-emerald-300' : partiallyPaid ? 'text-amber-300' : 'text-amber-300'}`}>
+          {isPaid
+            ? '✓ تم الدفع بالكامل'
+            : partiallyPaid
+              ? `مدفوع ${fmt(paidAmount)} · باقي ${fmt(remaining)}`
+              : '⏳ لم يتم الدفع بعد'}
         </span>
         {admin && (
           <button
@@ -178,10 +210,43 @@ export default function CustomerCard({ customer, menu, reload, admin, owner = fa
                 : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
             }`}
           >
-            {isPaid ? 'إلغاء الدفع' : 'تحديد كمدفوع'}
+            {isPaid ? 'إلغاء الدفع' : 'دفع الكل'}
           </button>
         )}
       </div>
+
+      {/* Note (e.g. "ليه باقي 50") — shown in a distinct color */}
+      {admin ? (
+        <div className="mt-2 relative">
+          <input
+            key={`note-${customer.note || ''}`}
+            name="customer-note"
+            defaultValue={customer.note || ''}
+            onBlur={(e) => setNote(e.target.value)}
+            placeholder="📝 ملاحظة (مثال: ليه باقي 50)"
+            className={`w-full rounded-lg px-3 py-2 pl-8 text-sm border focus:outline-none ${
+              customer.note
+                ? 'bg-rose-500/20 border-rose-500/50 text-rose-100 placeholder:text-rose-200/50'
+                : 'bg-coffee-card border-coffee-line placeholder:text-coffee-muted/60'
+            }`}
+          />
+          {customer.note && (
+            <button
+              onClick={() => setNote('')}
+              title="مسح الملاحظة"
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-rose-200/80 hover:text-rose-100"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      ) : (
+        customer.note && (
+          <div className="mt-2 bg-rose-500/20 border border-rose-500/50 text-rose-100 rounded-lg px-3 py-2 text-sm font-bold">
+            📝 {customer.note}
+          </div>
+        )
+      )}
 
       {menuOpen && (
         <QuickMenu customerId={customer._id} menu={menu} reload={reload} onClose={() => setMenuOpen(false)} />

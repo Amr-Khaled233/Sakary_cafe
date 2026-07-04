@@ -1,5 +1,6 @@
 const express = require('express');
 const Order = require('../models/Order');
+const { requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -40,6 +41,18 @@ router.put('/:id', async (req, res, next) => {
       await order.deleteOne();
       return res.json({ removed: true, id: req.params.id });
     }
+    await order.save();
+    res.json(order);
+  } catch (err) { next(err); }
+});
+
+// PATCH /api/orders/:id/paid  -> mark ONE item paid/unpaid. Body { isPaid } optional
+// (toggles if omitted).  (Admin only)
+router.patch('/:id/paid', requireAdmin, async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ message: 'الصنف غير موجود' });
+    order.isPaid = req.body.isPaid !== undefined ? !!req.body.isPaid : !order.isPaid;
     await order.save();
     res.json(order);
   } catch (err) { next(err); }

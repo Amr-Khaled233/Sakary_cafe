@@ -11,6 +11,7 @@ const customerSchema = new mongoose.Schema({
   customerName: { type: String, required: true, trim: true },
   customOverridePrice: { type: Number, default: null },
   isPaid: { type: Boolean, default: false },
+  note: { type: String, default: '' }, // free-text admin note (e.g. "ليه باقي 50")
 });
 
 module.exports = mongoose.model('Customer', customerSchema);

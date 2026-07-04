@@ -37,8 +37,11 @@ router.get('/:id', async (req, res, next) => {
     if (!customer) return res.status(404).json({ message: 'الزبون غير موجود' });
     const orders = await Order.find({ customerId: customer._id }).lean();
     const { subtotal, finalTotal } = finalTotalOf(customer, orders);
+    const paidAmount = customer.isPaid
+      ? finalTotal
+      : orders.reduce((s, o) => s + (o.isPaid ? o.price * o.quantity : 0), 0);
     const table = await Table.findById(customer.tableId).lean();
-    res.json({ ...customer, orders, subtotal, finalTotal, tableName: table ? table.tableName : '' });
+    res.json({ ...customer, orders, subtotal, finalTotal, paidAmount, tableName: table ? table.tableName : '' });
   } catch (err) { next(err); }
 });
 
@@ -54,6 +57,10 @@ router.put('/:id', async (req, res, next) => {
     if (req.body.customOverridePrice !== undefined) {
       if (req.user.role !== 'Admin') return res.status(403).json({ message: 'تعديل السعر للمسؤول فقط' });
       update.customOverridePrice = req.body.customOverridePrice === '' ? null : req.body.customOverridePrice;
+    }
+    if (req.body.note !== undefined) {
+      if (req.user.role !== 'Admin') return res.status(403).json({ message: 'الملاحظات للمسؤول فقط' });
+      update.note = String(req.body.note).trim();
     }
     const customer = await Customer.findByIdAndUpdate(req.params.id, update, { new: true });
     if (!customer) return res.status(404).json({ message: 'الزبون غير موجود' });

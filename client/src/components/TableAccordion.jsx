@@ -10,10 +10,11 @@ import CustomerCard from './CustomerCard';
 export default function TableAccordion({ table, menu, reload, admin }) {
   const [open, setOpen] = useState(true);
 
-  // Payment breakdown for this table.
+  // Payment breakdown for this table (paidAmount already accounts for whole-customer
+  // paid AND per-item paid, computed by the backend).
   const total = table.grandTotal;
-  const paid = table.customers.reduce((s, c) => s + (c.isPaid ? c.finalTotal : 0), 0);
-  const remaining = total - paid;
+  const paid = table.customers.reduce((s, c) => s + (c.paidAmount || 0), 0);
+  const remaining = Math.max(0, total - paid);
   const allPaid = table.customers.length > 0 && remaining <= 0;
 
   async function addCustomer() {

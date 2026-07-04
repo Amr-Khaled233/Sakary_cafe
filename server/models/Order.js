@@ -11,6 +11,7 @@ const orderSchema = new mongoose.Schema(
     itemName: { type: String, required: true, trim: true },
     price: { type: Number, required: true, min: 0 },
     quantity: { type: Number, required: true, default: 1, min: 1 },
+    isPaid: { type: Boolean, default: false }, // this individual item settled?
   },
   { timestamps: true }
 );

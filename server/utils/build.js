@@ -48,7 +48,11 @@ async function buildActiveTablesTree() {
   for (const c of customers) {
     const custOrders = ordersByCustomer.get(String(c._id)) || [];
     const { subtotal, finalTotal } = finalTotalOf(c, custOrders);
-    const enriched = { ...c, orders: custOrders, subtotal, finalTotal };
+    // Paid amount: whole customer paid -> everything; otherwise sum of paid items.
+    const paidAmount = c.isPaid
+      ? finalTotal
+      : custOrders.reduce((s, o) => s + (o.isPaid ? o.price * o.quantity : 0), 0);
+    const enriched = { ...c, orders: custOrders, subtotal, finalTotal, paidAmount };
     const key = String(c.tableId);
     if (!customersByTable.has(key)) customersByTable.set(key, []);
     customersByTable.get(key).push(enriched);
