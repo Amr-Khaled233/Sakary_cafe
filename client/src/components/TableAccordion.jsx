@@ -76,6 +76,15 @@ export default function TableAccordion({ table, menu, reload, admin }) {
             {table.customers.length} {table.customers.length === 1 ? 'زبون' : 'زبائن'}
           </p>
         </div>
+        {/* Add-customer button next to the table name. stopPropagation so it
+            doesn't toggle the accordion. */}
+        <button
+          onClick={(e) => { e.stopPropagation(); addCustomer(); }}
+          className="shrink-0 bg-coffee-gold/15 hover:bg-coffee-gold/25 border border-coffee-gold/40
+                     text-coffee-gold text-xs font-bold rounded-lg px-2.5 py-2 active:scale-95 transition"
+        >
+          + زبون
+        </button>
         <div className="text-left shrink-0">
           <p className="text-[10px] text-coffee-muted leading-none">الإجمالي</p>
           <p className="font-extrabold text-coffee-gold">{fmt(total)}</p>
@@ -119,19 +128,11 @@ export default function TableAccordion({ table, menu, reload, admin }) {
           </div>
 
           <div className="flex gap-2 mt-3">
-            {/* Both roles can add a customer (a User adds themselves by name). */}
-            <button
-              onClick={addCustomer}
-              className="flex-1 bg-coffee-gold/15 hover:bg-coffee-gold/25 border border-coffee-gold/40
-                         text-coffee-gold font-bold rounded-xl py-3 active:scale-95 transition"
-            >
-              + إضافة زبون
-            </button>
-            {/* Reset (empty) and delete are Admin only. */}
+            {/* Reset (empty) and delete are Admin only. (Add-customer moved to the header.) */}
             {admin && (
               <button
                 onClick={resetTable}
-                className="px-4 bg-coffee-card2 hover:bg-coffee-line border border-coffee-line
+                className="flex-1 bg-coffee-card2 hover:bg-coffee-line border border-coffee-line
                            text-coffee-cream rounded-xl py-3 active:scale-95 transition"
               >
                 ♻️ تصفير
