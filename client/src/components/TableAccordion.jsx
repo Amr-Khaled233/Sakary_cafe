@@ -9,6 +9,7 @@ import CustomerCard from './CustomerCard';
  */
 export default function TableAccordion({ table, menu, reload, admin }) {
   const [open, setOpen] = useState(true);
+  const [showWho, setShowWho] = useState(false); // "who paid" panel
 
   // Payment breakdown for this table (paidAmount already accounts for whole-customer
   // paid AND per-item paid, computed by the backend).
@@ -16,6 +17,13 @@ export default function TableAccordion({ table, menu, reload, admin }) {
   const paid = table.customers.reduce((s, c) => s + (c.paidAmount || 0), 0);
   const remaining = Math.max(0, total - paid);
   const allPaid = table.customers.length > 0 && remaining <= 0;
+
+  // Split customers into fully-paid vs not (for the "who paid" list).
+  const paidList = table.customers.filter(
+    (c) => c.isPaid || (c.finalTotal > 0 && (c.paidAmount || 0) >= c.finalTotal)
+  );
+  const paidIds = new Set(paidList.map((c) => c._id));
+  const unpaidList = table.customers.filter((c) => !paidIds.has(c._id));
 
   async function addCustomer() {
     const name = `زبون ${table.customers.length + 1}`;
@@ -86,6 +94,18 @@ export default function TableAccordion({ table, menu, reload, admin }) {
         >
           + زبون
         </button>
+        {/* "Who paid" toggle — shows which names paid fully vs not. */}
+        {table.customers.length > 0 && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowWho((s) => !s); }}
+            title="مين دفع؟"
+            className={`shrink-0 text-sm rounded-lg px-2.5 py-2 border active:scale-95 transition ${
+              showWho ? 'bg-coffee-gold text-coffee-bg border-coffee-gold' : 'bg-coffee-card2 text-coffee-cream border-coffee-line'
+            }`}
+          >
+            🧾
+          </button>
+        )}
         <div className="text-left shrink-0">
           <p className="text-[10px] text-coffee-muted leading-none">الإجمالي</p>
           <p className="font-extrabold text-coffee-gold">{fmt(total)}</p>
@@ -96,6 +116,28 @@ export default function TableAccordion({ table, menu, reload, admin }) {
           )}
         </div>
       </div>
+
+      {/* "Who paid" panel (works even when the accordion is collapsed) */}
+      {showWho && (
+        <div className="px-3 py-3 border-t border-coffee-line bg-coffee-bg/40 space-y-2">
+          <div>
+            <p className="text-emerald-300 font-bold text-xs mb-1">✅ دفعوا بالكامل ({paidList.length})</p>
+            <p className="text-emerald-200/90 text-xs leading-relaxed">
+              {paidList.length ? paidList.map((c) => c.customerName).join('، ') : 'لا أحد'}
+            </p>
+          </div>
+          <div>
+            <p className="text-amber-300 font-bold text-xs mb-1">⏳ لسه ({unpaidList.length})</p>
+            <p className="text-amber-200/90 text-xs leading-relaxed">
+              {unpaidList.length
+                ? unpaidList
+                    .map((c) => c.customerName + ((c.paidAmount || 0) > 0 ? ` (باقي ${fmt(c.finalTotal - c.paidAmount)})` : ''))
+                    .join('، ')
+                : 'لا أحد'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Accordion body */}
       {open && (
