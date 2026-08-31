@@ -16,9 +16,13 @@ export default function QuickMenu({ customerId, menu, onClose, reload }) {
   const [customPrice, setCustomPrice] = useState('');
   const [counts, setCounts] = useState({});   // key -> how many added this session
   const [flash, setFlash] = useState(null);   // { key, name } just added
+  const [query, setQuery] = useState('');     // search filter
   const timer = useRef();
 
   const keyOf = (name, price) => `${name}__${price}`;
+
+  // Alphabetical menu filtered by the search box.
+  const shown = sortMenu(menu).filter((m) => m.name.includes(query.trim()));
 
   async function add(itemName, price) {
     await api.addOrder({ customerId, itemName, price, quantity: 1 });
@@ -44,9 +48,30 @@ export default function QuickMenu({ customerId, menu, onClose, reload }) {
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <div className="absolute inset-x-0 bottom-0 max-w-2xl mx-auto bg-coffee-card border-t border-coffee-line
                       rounded-t-3xl p-4 pb-6 max-h-[85vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-extrabold text-lg">اختر المشروب</h3>
-          <button onClick={onClose} className="text-coffee-muted text-2xl leading-none px-2">✕</button>
+        {/* Sticky header + search so it stays visible while scrolling the list */}
+        <div className="sticky top-0 z-10 bg-coffee-card -mx-4 px-4 pt-1 pb-2 mb-2 border-b border-coffee-line">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-extrabold text-lg">اختر المشروب</h3>
+            <button onClick={onClose} className="text-coffee-muted text-2xl leading-none px-2">✕</button>
+          </div>
+          <div className="relative">
+            <input
+              name="menu-search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="🔍 ابحث عن مشروب..."
+              className="w-full bg-coffee-card2 border border-coffee-line rounded-xl px-3 py-2.5 text-base
+                         placeholder:text-coffee-muted/60 focus:outline-none focus:border-coffee-gold"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery('')}
+                className="absolute left-2 top-1/2 -translate-y-1/2 text-coffee-muted text-lg"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
 
         {/* "Added" confirmation banner */}
@@ -58,8 +83,8 @@ export default function QuickMenu({ customerId, menu, onClose, reload }) {
         )}
 
         {/* Quick-select grid: fat-finger-friendly buttons */}
-        <div className="grid grid-cols-2 gap-2 mb-4">
-          {sortMenu(menu).map((m) => {
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          {shown.map((m) => {
             const key = keyOf(m.name, m.price);
             const n = counts[key] || 0;
             const isFlash = flash && flash.key === key;
@@ -87,6 +112,12 @@ export default function QuickMenu({ customerId, menu, onClose, reload }) {
             );
           })}
         </div>
+
+        {shown.length === 0 && (
+          <p className="text-center text-coffee-muted text-sm py-6">
+            لا يوجد مشروب بالاسم "{query}". تقدر تضيفه كصنف مخصص بالأسفل.
+          </p>
+        )}
 
         {/* Custom item */}
         <div className="border-t border-coffee-line pt-3">
